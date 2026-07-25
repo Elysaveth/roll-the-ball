@@ -1,0 +1,4 @@
+[gd_scene format=3 uid="uid://el2vp0febe6i"]
+
+[node name="LevelButton" type="Button"]
+custom_minimum_size = Vector2(64, 64)
