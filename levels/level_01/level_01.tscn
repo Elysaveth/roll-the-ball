@@ -1,0 +1,106 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://levels/Level.gd" id="1_level"]
+[ext_resource type="Script" path="res://levels/Goal.gd" id="2_goal"]
+[ext_resource type="PackedScene" path="res://entities/props/ball/ball.tscn" id="3_ball"]
+[ext_resource type="PackedScene" path="res://entities/props/hielo/hielo.tscn" id="4_hielo"]
+[ext_resource type="PackedScene" path="res://entities/props/moai/moai.tscn" id="5_moai"]
+[ext_resource type="PackedScene" path="res://entities/props/pinball/pinball.tscn" id="6_pinball"]
+[ext_resource type="PackedScene" path="res://entities/props/bomb/bomb.tscn" id="7_bomb"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_stone"]
+friction = 0.6
+bounce = 0.1
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ledge"]
+size = Vector2(500, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_floor"]
+size = Vector2(2600, 60)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_basket_floor"]
+size = Vector2(300, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_basket_wall"]
+size = Vector2(20, 160)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_goal"]
+size = Vector2(260, 110)
+
+[node name="Level01" type="Node2D"]
+script = ExtResource("1_level")
+available_props = Array[PackedScene]([ExtResource("4_hielo"), ExtResource("5_moai"), ExtResource("6_pinball"), ExtResource("7_bomb")])
+ball_scene = ExtResource("3_ball")
+display_name = "Primer rodaje"
+
+[node name="Geometry" type="Node2D" parent="."]
+
+[node name="LeftLedge" type="StaticBody2D" parent="Geometry"]
+position = Vector2(250, 420)
+rotation = 0.2094
+physics_material_override = SubResource("PhysicsMaterial_stone")
+
+[node name="Polygon2D" type="Polygon2D" parent="Geometry/LeftLedge"]
+color = Color(0.31, 0.35, 0.42, 1)
+polygon = PackedVector2Array(-250, -20, 250, -20, 250, 20, -250, 20)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/LeftLedge"]
+shape = SubResource("RectangleShape2D_ledge")
+
+[node name="Floor" type="StaticBody2D" parent="Geometry"]
+position = Vector2(960, 1180)
+physics_material_override = SubResource("PhysicsMaterial_stone")
+
+[node name="Polygon2D" type="Polygon2D" parent="Geometry/Floor"]
+color = Color(0.24, 0.26, 0.31, 1)
+polygon = PackedVector2Array(-1300, -30, 1300, -30, 1300, 30, -1300, 30)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/Floor"]
+shape = SubResource("RectangleShape2D_floor")
+
+[node name="BasketFloor" type="StaticBody2D" parent="Geometry"]
+position = Vector2(1650, 900)
+physics_material_override = SubResource("PhysicsMaterial_stone")
+
+[node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketFloor"]
+color = Color(0.31, 0.35, 0.42, 1)
+polygon = PackedVector2Array(-150, -20, 150, -20, 150, 20, -150, 20)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/BasketFloor"]
+shape = SubResource("RectangleShape2D_basket_floor")
+
+[node name="BasketWallLeft" type="StaticBody2D" parent="Geometry"]
+position = Vector2(1510, 800)
+physics_material_override = SubResource("PhysicsMaterial_stone")
+
+[node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketWallLeft"]
+color = Color(0.31, 0.35, 0.42, 1)
+polygon = PackedVector2Array(-10, -80, 10, -80, 10, 80, -10, 80)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/BasketWallLeft"]
+shape = SubResource("RectangleShape2D_basket_wall")
+
+[node name="BasketWallRight" type="StaticBody2D" parent="Geometry"]
+position = Vector2(1790, 800)
+physics_material_override = SubResource("PhysicsMaterial_stone")
+
+[node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketWallRight"]
+color = Color(0.31, 0.35, 0.42, 1)
+polygon = PackedVector2Array(-10, -80, 10, -80, 10, 80, -10, 80)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/BasketWallRight"]
+shape = SubResource("RectangleShape2D_basket_wall")
+
+[node name="BallSpawn" type="Marker2D" parent="."]
+position = Vector2(80, 320)
+
+[node name="Goal" type="Area2D" parent="."]
+position = Vector2(1650, 845)
+script = ExtResource("2_goal")
+
+[node name="Polygon2D" type="Polygon2D" parent="Goal"]
+color = Color(0.35, 0.85, 0.45, 0.25)
+polygon = PackedVector2Array(-130, -55, 130, -55, 130, 55, -130, 55)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Goal"]
+shape = SubResource("RectangleShape2D_goal")

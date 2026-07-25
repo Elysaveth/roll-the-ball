@@ -1,0 +1,37 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/props/bomb/Bomb.gd" id="1_bomb"]
+[ext_resource type="Texture2D" path="res://entities/props/bomb/bomb.png" id="2_tex"]
+[ext_resource type="PackedScene" path="res://entities/effects/explosion/explosion.tscn" id="3_explosion"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bomb"]
+atlas = ExtResource("2_tex")
+region = Rect2(217, 853, 290, 423)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bomb"]
+size = Vector2(80, 120)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_trigger"]
+radius = 68.0
+
+[node name="Bomb" type="RigidBody2D"]
+mass = 6.0
+script = ExtResource("1_bomb")
+prop_id = "bomb"
+object_name = "Bomba"
+explosion_scene = ExtResource("3_explosion")
+blast_radius = 220.0
+blast_force = 1400.0
+fuse_seconds = 0.35
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.3, 0.3)
+texture = SubResource("AtlasTexture_bomb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_bomb")
+
+[node name="Trigger" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
+shape = SubResource("CircleShape2D_trigger")

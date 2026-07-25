@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://entities/props/PlaceableObject.gd" id="1_placeable"]
+[ext_resource type="Texture2D" path="res://entities/props/hielo/hielo.png" id="2_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hielo"]
+atlas = ExtResource("2_tex")
+region = Rect2(513, 919, 424, 73)
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_hielo"]
+friction = 0.02
+bounce = 0.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hielo"]
+size = Vector2(212, 36)
+
+[node name="Hielo" type="RigidBody2D"]
+mass = 20.0
+physics_material_override = SubResource("PhysicsMaterial_hielo")
+script = ExtResource("1_placeable")
+prop_id = "hielo"
+object_name = "Hielo"
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.5, 0.5)
+texture = SubResource("AtlasTexture_hielo")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_hielo")

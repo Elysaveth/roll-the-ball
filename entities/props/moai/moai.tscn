@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://entities/props/PlaceableObject.gd" id="1_placeable"]
+[ext_resource type="Texture2D" path="res://entities/props/moai/moai.png" id="2_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_moai"]
+atlas = ExtResource("2_tex")
+region = Rect2(380, 480, 607, 888)
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_moai"]
+friction = 0.9
+bounce = 0.05
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_moai"]
+size = Vector2(134, 196)
+
+[node name="Moai" type="RigidBody2D"]
+mass = 80.0
+physics_material_override = SubResource("PhysicsMaterial_moai")
+script = ExtResource("1_placeable")
+prop_id = "moai"
+object_name = "Moái"
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.22, 0.22)
+texture = SubResource("AtlasTexture_moai")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_moai")

@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://entities/props/PlaceableObject.gd" id="1_placeable"]
+[ext_resource type="Texture2D" path="res://entities/props/pinball/pinball.png" id="2_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pinball"]
+atlas = ExtResource("2_tex")
+region = Rect2(6, 41, 774, 932)
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_pinball"]
+friction = 0.2
+bounce = 0.95
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pinball"]
+radius = 80.0
+
+[node name="Pinball" type="RigidBody2D"]
+mass = 30.0
+physics_material_override = SubResource("PhysicsMaterial_pinball")
+script = ExtResource("1_placeable")
+prop_id = "pinball"
+object_name = "Pinball"
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.2, 0.2)
+texture = SubResource("AtlasTexture_pinball")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_pinball")

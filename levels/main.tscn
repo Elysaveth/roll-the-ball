@@ -1,14 +1,14 @@
-[gd_scene load_steps=3 format=3 uid="uid://b1eq6ggu6r4ca"]
+[gd_scene format=3 uid="uid://b1eq6ggu6r4ca"]
 
 [ext_resource type="Script" uid="uid://tove1igm71x4" path="res://levels/Main.gd" id="1_wdj6m"]
 [ext_resource type="Script" uid="uid://ccgkdta6wf5ri" path="res://ui/hud/HUDController.gd" id="2_l8qe7"]
 
-[node name="Main" type="Node2D"]
+[node name="Main" type="Node2D" unique_id=2113427656]
 script = ExtResource("1_wdj6m")
 
-[node name="World" type="Node2D" parent="."]
+[node name="World" type="Node2D" parent="." unique_id=913856921]
 
-[node name="UI" type="Node" parent="."]
+[node name="UI" type="Node" parent="." unique_id=116716848]
 
-[node name="HUD" type="CanvasLayer" parent="UI"]
+[node name="HUD" type="CanvasLayer" parent="UI" unique_id=1472585248]
 script = ExtResource("2_l8qe7")

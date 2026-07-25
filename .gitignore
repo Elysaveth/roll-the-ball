@@ -8,6 +8,7 @@ secrets.cfg
 # IDE
 .idea/
 .editorconfig
+.mcp.json
 
 # Temporal files
 .tmp/
