@@ -13,7 +13,7 @@ friction = 0.6
 bounce = 0.1
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ledge"]
-size = Vector2(500, 40)
+size = Vector2(300, 40)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_floor"]
 size = Vector2(2600, 60)
@@ -36,13 +36,13 @@ display_name = "Primer rodaje"
 [node name="Geometry" type="Node2D" parent="."]
 
 [node name="LeftLedge" type="StaticBody2D" parent="Geometry"]
-position = Vector2(250, 420)
-rotation = 0.2094
+position = Vector2(200, 380)
+rotation = 0.45
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/LeftLedge"]
 color = Color(0.31, 0.35, 0.42, 1)
-polygon = PackedVector2Array(-250, -20, 250, -20, 250, 20, -250, 20)
+polygon = PackedVector2Array(-150, -20, 150, -20, 150, 20, -150, 20)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/LeftLedge"]
 shape = SubResource("RectangleShape2D_ledge")
@@ -59,7 +59,7 @@ polygon = PackedVector2Array(-1300, -30, 1300, -30, 1300, 30, -1300, 30)
 shape = SubResource("RectangleShape2D_floor")
 
 [node name="BasketFloor" type="StaticBody2D" parent="Geometry"]
-position = Vector2(1650, 900)
+position = Vector2(1100, 860)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketFloor"]
@@ -70,7 +70,7 @@ polygon = PackedVector2Array(-150, -20, 150, -20, 150, 20, -150, 20)
 shape = SubResource("RectangleShape2D_basket_floor")
 
 [node name="BasketWallLeft" type="StaticBody2D" parent="Geometry"]
-position = Vector2(1510, 800)
+position = Vector2(960, 760)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketWallLeft"]
@@ -81,7 +81,7 @@ polygon = PackedVector2Array(-10, -80, 10, -80, 10, 80, -10, 80)
 shape = SubResource("RectangleShape2D_basket_wall")
 
 [node name="BasketWallRight" type="StaticBody2D" parent="Geometry"]
-position = Vector2(1790, 800)
+position = Vector2(1240, 760)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketWallRight"]
@@ -92,10 +92,10 @@ polygon = PackedVector2Array(-10, -80, 10, -80, 10, 80, -10, 80)
 shape = SubResource("RectangleShape2D_basket_wall")
 
 [node name="BallSpawn" type="Marker2D" parent="."]
-position = Vector2(80, 320)
+position = Vector2(80, 290)
 
 [node name="Goal" type="Area2D" parent="."]
-position = Vector2(1650, 845)
+position = Vector2(1100, 805)
 script = ExtResource("2_goal")
 
 [node name="Polygon2D" type="Polygon2D" parent="Goal"]

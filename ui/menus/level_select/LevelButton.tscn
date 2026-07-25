@@ -1,4 +1,7 @@
-[gd_scene format=3 uid="uid://el2vp0febe6i"]
+[gd_scene load_steps=2 format=3 uid="uid://el2vp0febe6i"]
+
+[ext_resource type="Script" path="res://ui/menus/level_select/LevelButton.gd" id="1_levelbutton"]
 
 [node name="LevelButton" type="Button"]
-custom_minimum_size = Vector2(64, 64)
+custom_minimum_size = Vector2(120, 120)
+script = ExtResource("1_levelbutton")

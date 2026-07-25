@@ -54,13 +54,19 @@ func save_profile() -> bool:
 	return false
 
 
+## What a brand-new player starts with. Currently every implemented prop, so the
+## game is playable end to end — trim this down as the unlock curve gets
+## designed, and hand the rest out through unlock_prop() / the workshop.
+const STARTING_PROPS: Array[String] = ["hielo", "moai", "pinball", "bomb"]
+
+
 func _default_profile() -> Dictionary:
 	return {
 		"profile_version": PROFILE_VERSION,
 		"time_bank": STARTING_BANK,
 		"highest_unlocked_level": 1,
 		"best_times": {},        # keys are level ids AS STRINGS — see _best_times()
-		"unlocked_props": [],    # prop ids; the workshop reads this
+		"unlocked_props": STARTING_PROPS.duplicate(),
 		"materials": {},         # material id -> count, for blueprint crafting later
 		"broken_counts": {},     # what the player has destroyed, feeds materials
 	}
