@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3 uid="uid://c1eluj3t83i5u"]
+
+[ext_resource type="Texture2D" uid="uid://cx3ogc453uop7" path="res://Assets/palanca1/palanca1.png" id="1_4370k"]
+[ext_resource type="Texture2D" uid="uid://bffjgreo4c6bu" path="res://Assets/palanca2/palanca2.png" id="2_lf5m6"]
+[ext_resource type="Texture2D" uid="uid://bxss6edj72qcv" path="res://Assets/palanca3/palanca3.png" id="3_abce8"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_pdclx"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_4370k")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_lf5m6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_abce8")
+}],
+"loop": true,
+"name": &"palanca",
+"speed": 5.0
+}]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="palanca" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_pdclx")
+animation = &"palanca"
