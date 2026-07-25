@@ -1,50 +1,60 @@
-extends Control
+extends Button
 class_name PaletteItem
-# Attach to a Control (e.g. a TextureButton/Panel) in your object palette/toolbar,
-# under ui/hud/. Dragging this item spawns an instance of `object_scene` and drops
-# it into `spawn_parent_path` (the World/PlacedObjects container) at the mouse's
-# world position.
+# One prop in the bottom toolbar. Built in code by HUDController rather than
+# from a .tscn — it's a Button with an icon and nothing else, and generating it
+# keeps the palette in lockstep with whatever the level offers.
+#
+# Pressing it spawns the REAL prop straight into World/PlacedObjects, already
+# attached to the cursor, instead of maintaining a separate preview node that
+# would have to be kept visually in sync with the thing it previews. The
+# player's existing mouse-down simply becomes the prop's drag; releasing drops
+# it (see PlaceableObject.begin_drag_from_palette).
 
-@export var object_scene: PackedScene
-@export var spawn_parent_path: NodePath
+var object_scene: PackedScene = null
 
-var _preview: Node2D = null
-var _dragging: bool = false
+
+func setup(scene: PackedScene, icon_texture: Texture2D, label: String) -> void:
+	object_scene = scene
+	icon = icon_texture
+	expand_icon = true
+	tooltip_text = label
+	custom_minimum_size = Vector2(96, 96)
+	focus_mode = Control.FOCUS_NONE
+
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			_start_drag()
-		else:
-			_end_drag()
-
-func _start_drag() -> void:
-	if object_scene == null or GameManager.is_play_mode():
+	if object_scene == null or not GameManager.is_edit_mode():
 		return
-	_dragging = true
-	_preview = object_scene.instantiate()
-	get_tree().root.add_child(_preview)
+	if not event is InputEventMouseButton:
+		return
+	var button: InputEventMouseButton = event
+	if button.button_index == MOUSE_BUTTON_LEFT and button.pressed:
+		_spawn_and_drag()
+		accept_event()
 
-func _process(_delta: float) -> void:
-	if _dragging and _preview:
-		_preview.global_position = _get_world_mouse_position()
 
-func _end_drag() -> void:
-	if _dragging and _preview:
-		var spawn_parent: Node = get_node_or_null(spawn_parent_path)
-		if spawn_parent:
-			_preview.get_parent().remove_child(_preview)
-			spawn_parent.add_child(_preview)
-			_preview.global_position = _get_world_mouse_position()
-			SignalBus.object_placed.emit(_preview)
-		else:
-			_preview.queue_free()
-	_dragging = false
-	_preview = null
+func _spawn_and_drag() -> void:
+	var container: Node = GameManager.get_placed_objects_container()
+	if container == null:
+		push_warning("PaletteItem: no PlacedObjects container — is a level loaded?")
+		return
 
-func _get_world_mouse_position() -> Vector2:
-	var viewport: Viewport = get_viewport()
-	var camera: Camera2D = viewport.get_camera_2d()
-	if camera:
+	var instance: Node = object_scene.instantiate()
+	if not instance is PlaceableObject:
+		push_error("PaletteItem: '%s' is not a PlaceableObject" % object_scene.resource_path)
+		instance.free()
+		return
+
+	var prop: PlaceableObject = instance
+	container.add_child(prop)
+	prop.global_position = _world_mouse_position()
+	prop.begin_drag_from_palette()
+
+
+func _world_mouse_position() -> Vector2:
+	# The HUD is on a CanvasLayer, so its own mouse position is in screen space.
+	# The prop lives in the world, so the camera has to do the conversion.
+	var camera: Camera2D = get_viewport().get_camera_2d()
+	if camera != null:
 		return camera.get_global_mouse_position()
-	return viewport.get_mouse_position()
+	return get_global_mouse_position()

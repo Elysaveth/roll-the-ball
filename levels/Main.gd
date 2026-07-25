@@ -1,29 +1,30 @@
-
 extends Node2D
 class_name Main
-# Attach to the root node of your main gameplay scene.
+# Root of the gameplay scene (levels/main.tscn).
 #
-# Expected scene tree:
+# Deliberately thin. Main is what knows the scene layout, so its only job is
+# telling GameManager where the two containers are and then getting out of the
+# way — every rule about modes, timing and saving lives in the autoloads.
+#
+# Scene tree:
 # Main (Node2D, this script)
 # ├── World (Node2D)
-# │   ├── Camera2D (CameraController.gd)
-# │   └── PlacedObjects (Node2D)              -- objects get parented here;
-# │                                              auto-added to "spawn_root" below
+# │   ├── Camera2D          (systems/camera_system/CameraController.gd)
+# │   ├── Level (Node2D)    -- the current level scene is instanced in here
+# │   └── PlacedObjects (Node2D)
+# │                         -- props the player drops; the only thing captured
+# │                            into a layout snapshot or a save file
 # └── UI
-#     ├── hud/ (CanvasLayer, HUDController.gd)  -- Play/Stop button, palette
-#     │   ├── PlayButton (Button)
-#     │   └── Palette (Control)
-#     │       └── ...PaletteItem children (ui/hud/PaletteItem.gd)
-#     └── menus/ (your MainMenu / PauseMenu / LevelSelect / Leaderboard screens)
-#         -- not covered by these base scripts; wire them up to SignalBus
-#            (level_saved, level_loaded, scores_received, ...) as needed.
+#     └── HUD (CanvasLayer, ui/hud/HUDController.gd)
 #
 # Autoloads required (Project Settings > Autoload), in this order:
-# SignalBus -> GameManager -> SaveManager -> SilentWolf (from the plugin) -> LeaderboardAPI
+# SignalBus -> GameManager -> SaveManager -> SilentWolf (plugin) -> LeaderboardApi
 
 @onready var world: Node2D = $World
+@onready var level_container: Node2D = $World/Level
 @onready var placed_objects: Node2D = $World/PlacedObjects
 
+
 func _ready() -> void:
-	placed_objects.add_to_group("spawn_root") # lets SaveManager.load_level() find it without a direct reference
-	GameManager.set_mode(GameManager.Mode.EDIT)
+	GameManager.register_world(level_container, placed_objects)
+	GameManager.notify_world_ready()
