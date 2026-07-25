@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1eq6ggu6r4ca"]
+
+[ext_resource type="Script" uid="uid://tove1igm71x4" path="res://levels/Main.gd" id="1_wdj6m"]
+[ext_resource type="Script" uid="uid://ccgkdta6wf5ri" path="res://ui/hud/HUDController.gd" id="2_l8qe7"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_wdj6m")
+
+[node name="World" type="Node2D" parent="."]
+
+[node name="UI" type="Node" parent="."]
+
+[node name="HUD" type="CanvasLayer" parent="UI"]
+script = ExtResource("2_l8qe7")

@@ -1,0 +1,13 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Ignore sensitive keys
+secrets.cfg
+
+# IDE
+.idea/
+.editorconfig
+
+# Temporal files
+.tmp/
