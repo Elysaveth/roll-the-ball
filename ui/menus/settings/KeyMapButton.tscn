@@ -1,3 +1,6 @@
-[gd_scene format=3 uid="uid://b0i6yupl5eygc"]
+[gd_scene load_steps=2 format=3 uid="uid://b0i6yupl5eygc"]
+
+[ext_resource type="Script" uid="uid://b0ej0rxv8qudl" path="res://ui/menus/settings/KeyMapButton.gd" id="1_rlfwt"]
 
 [node name="KeyMapButton" type="Button"]
+script = ExtResource("1_rlfwt")

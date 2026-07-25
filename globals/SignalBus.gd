@@ -30,3 +30,7 @@ signal score_submitted(player_name: String, score: float)
 signal score_submit_failed(error: String)
 signal scores_received(scores: Variant)
 signal scores_request_failed(error: String)
+
+# -- Keybinding remap (see ui/menus/KeyMapButton.gd) --
+signal remap_started(action_name: String)  # SettingsMenu shows its "press any key" overlay
+signal remap_ended(action_name: String)    # SettingsMenu hides it again
