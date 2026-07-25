@@ -1,8 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://c1eluj3t83i5u"]
+[gd_scene format=3 uid="uid://c1eluj3t83i5u"]
 
-[ext_resource type="Texture2D" uid="uid://cx3ogc453uop7" path="res://Assets/palanca1/palanca1.png" id="1_4370k"]
-[ext_resource type="Texture2D" uid="uid://bffjgreo4c6bu" path="res://Assets/palanca2/palanca2.png" id="2_lf5m6"]
-[ext_resource type="Texture2D" uid="uid://bxss6edj72qcv" path="res://Assets/palanca3/palanca3.png" id="3_abce8"]
+[ext_resource type="Texture2D" uid="uid://dls47k5vgr128" path="res://entities/effects/palanca/palanca_l/palanca_l.png" id="1_4370k"]
+[ext_resource type="Texture2D" uid="uid://b02tgsvsgoqi5" path="res://entities/effects/palanca/palanca_c/palanca_c.png" id="2_lf5m6"]
+[ext_resource type="Texture2D" uid="uid://dxsntfptd46nj" path="res://entities/effects/palanca/palanca_r/palanca_r.png" id="3_abce8"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_pdclx"]
 animations = [{

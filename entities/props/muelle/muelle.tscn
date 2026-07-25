@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://kxrtv51l20l2"]
+
+[ext_resource type="Texture2D" uid="uid://bw0kwe00xj6m2" path="res://entities/props/muelle/muelle_close.png" id="1_hb5vu"]
+[ext_resource type="Texture2D" uid="uid://d2hesdivffhyc" path="res://entities/props/muelle/muelle_open.png" id="2_2foh6"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_l4sxk"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_hb5vu")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_2foh6")
+}],
+"loop": true,
+"name": &"muelle",
+"speed": 5.0
+}]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="muelle" type="AnimatedSprite2D" parent="."]
+position = Vector2(1, 1)
+sprite_frames = SubResource("SpriteFrames_l4sxk")
+animation = &"muelle"
