@@ -38,6 +38,7 @@ cooldown_seconds = 0.2
 fire_animation = &"default"
 prop_id = "muelle"
 object_name = "Spring"
+palette_icon_frame = 0
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1030600921]
 scale = Vector2(0.5884591, 0.32853732)
