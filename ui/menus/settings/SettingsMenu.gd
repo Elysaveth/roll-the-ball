@@ -10,10 +10,8 @@ extends Control
 # Nodes are reached by unique name (%Name) rather than by path, so rearranging the
 # scene's containers doesn't break the script.
 #
-# NOT YET WIRED, deliberately left as labelled placeholders for whoever picks them
-# up: music/SFX volumes (need their own audio buses), VSync, the three Visuals
-# toggles, text size and colourblind mode. Master volume, FPS limit, language and
-# the whole Controls tab are live.
+# Everything on this screen is live. Motion blur was removed rather than left as a
+# dead switch — see the note in globals/Settings.gd.
 
 const KEY_MAP_ROW: PackedScene = preload("res://ui/menus/settings/KeyMapButton.tscn")
 
@@ -25,24 +23,45 @@ const TAB_TITLE_KEYS: PackedStringArray = [
 	"SETTINGS_TAB_VISUALS",
 	"SETTINGS_TAB_ACCESSIBILITY",
 	"SETTINGS_TAB_CONTROLS",
+	"SETTINGS_TAB_DEBUG",
 ]
 
 @onready var tabs: TabContainer = %Tabs
 @onready var master_slider: HSlider = %MasterSlider
+@onready var music_slider: HSlider = %MusicSlider
+@onready var sfx_slider: HSlider = %SFXSlider
 @onready var fps_option: OptionButton = %FPSLimit
+@onready var vsync_toggle: CheckButton = %VSync
+@onready var particles_toggle: CheckButton = %ParticlesToggle
+@onready var shake_toggle: CheckButton = %ScreenShakeToggle
 @onready var language_option: OptionButton = %Language
+@onready var text_size_slider: HSlider = %TextSize
+@onready var colorblind_option: OptionButton = %ColorblindMode
+@onready var debug_unlock_toggle: CheckButton = %DebugUnlockAll
 @onready var controls_list: VBoxContainer = %ControlsList
 @onready var back_button: Button = %Back
 
 
 func _ready() -> void:
-	master_slider.min_value = 0.0
-	master_slider.max_value = 1.0
-	master_slider.step = 0.01
+	for slider in [master_slider, music_slider, sfx_slider]:
+		slider.min_value = 0.0
+		slider.max_value = 1.0
+		slider.step = 0.01
+	text_size_slider.min_value = Settings.MIN_TEXT_SCALE
+	text_size_slider.max_value = Settings.MAX_TEXT_SCALE
+	text_size_slider.step = 0.05
 
 	master_slider.value_changed.connect(Settings.set_master_volume)
+	music_slider.value_changed.connect(Settings.set_music_volume)
+	sfx_slider.value_changed.connect(Settings.set_sfx_volume)
 	fps_option.item_selected.connect(Settings.set_fps_index)
+	vsync_toggle.toggled.connect(Settings.set_vsync_enabled)
+	particles_toggle.toggled.connect(Settings.set_particles_enabled)
+	shake_toggle.toggled.connect(Settings.set_screen_shake_enabled)
 	language_option.item_selected.connect(Settings.set_locale_index)
+	text_size_slider.value_changed.connect(Settings.set_text_scale)
+	colorblind_option.item_selected.connect(Settings.set_colorblind_index)
+	debug_unlock_toggle.toggled.connect(Settings.set_debug_unlock_all)
 	back_button.pressed.connect(hide)
 	# Each language names itself in the dropdown, and tab titles and action names
 	# are translated too, so all of it is rebuilt when the locale changes.
@@ -69,12 +88,25 @@ func _populate_options() -> void:
 	for i in Settings.LOCALE_LABEL_KEYS.size():
 		language_option.add_item(tr(Settings.LOCALE_LABEL_KEYS[i]), i)
 
+	colorblind_option.clear()
+	for i in Settings.COLORBLIND_LABEL_KEYS.size():
+		colorblind_option.add_item(tr(Settings.COLORBLIND_LABEL_KEYS[i]), i)
+
 
 func _show_current_values() -> void:
-	# set_value_no_signal, or this would echo straight back into Settings.
+	# set_value_no_signal / set_pressed_no_signal, or these would echo straight back
+	# into Settings and re-save on every open.
 	master_slider.set_value_no_signal(Settings.master_volume)
+	music_slider.set_value_no_signal(Settings.music_volume)
+	sfx_slider.set_value_no_signal(Settings.sfx_volume)
+	text_size_slider.set_value_no_signal(Settings.text_scale)
+	vsync_toggle.set_pressed_no_signal(Settings.vsync_enabled)
+	particles_toggle.set_pressed_no_signal(Settings.particles_enabled)
+	shake_toggle.set_pressed_no_signal(Settings.screen_shake_enabled)
+	debug_unlock_toggle.set_pressed_no_signal(Settings.debug_unlock_all)
 	fps_option.selected = Settings.fps_index
 	language_option.selected = Settings.locale_index
+	colorblind_option.selected = Settings.colorblind_index
 
 
 func _on_locale_changed(_locale: String) -> void:

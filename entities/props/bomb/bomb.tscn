@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=3]
 
-[ext_resource type="Script" path="res://entities/props/bomb/Bomb.gd" id="1_bomb"]
+[ext_resource type="Script" path="res://entities/props/Explosive.gd" id="1_bomb"]
 [ext_resource type="Texture2D" path="res://entities/props/bomb/bomb.png" id="2_tex"]
 [ext_resource type="PackedScene" path="res://entities/effects/explosion/explosion.tscn" id="3_explosion"]
 
@@ -23,6 +23,8 @@ explosion_scene = ExtResource("3_explosion")
 blast_radius = 220.0
 blast_force = 1400.0
 fuse_seconds = 0.35
+break_power = 1.0
+shake_strength = 12.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.3, 0.3)

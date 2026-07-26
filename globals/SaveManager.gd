@@ -57,7 +57,11 @@ func save_profile() -> bool:
 ## What a brand-new player starts with. Currently every implemented prop, so the
 ## game is playable end to end — trim this down as the unlock curve gets
 ## designed, and hand the rest out through unlock_prop() / the workshop.
-const STARTING_PROPS: Array[String] = ["hielo", "moai", "pinball", "bomb"]
+const STARTING_PROPS: Array[String] = [
+	"hielo", "madera", "metal", "moai", "pinball", "muelle", "canon",
+	"cohete_little", "cohete_big", "bomb", "dinamita", "tntminecraft",
+	"portal_in", "portal_out",
+]
 
 
 func _default_profile() -> Dictionary:
@@ -183,6 +187,11 @@ func get_highest_unlocked_level() -> int:
 
 
 func is_level_unlocked(level_id: int) -> bool:
+	# Debug mode opens everything that exists, so the content team can jump to any
+	# level without grinding to it. Checked here rather than at each call site so
+	# nothing can forget it.
+	if Settings.debug_unlock_all:
+		return true
 	return level_id <= get_highest_unlocked_level()
 
 
@@ -199,6 +208,8 @@ func get_unlocked_props() -> Array:
 
 
 func is_prop_unlocked(prop_id: String) -> bool:
+	if Settings.debug_unlock_all:
+		return true
 	return prop_id in get_unlocked_props()
 
 

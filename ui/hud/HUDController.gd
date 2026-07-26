@@ -53,6 +53,8 @@ func _ready() -> void:
 	SignalBus.time_ran_out.connect(_on_time_ran_out)
 	SignalBus.time_bank_changed.connect(_on_time_bank_changed)
 	SignalBus.prop_context_requested.connect(_on_prop_context_requested)
+	# Debug mode changes which props are offered, so the palette has to be rebuilt.
+	SignalBus.debug_unlock_changed.connect(func(_enabled: bool) -> void: _build_palette())
 	prop_menu.id_pressed.connect(_on_prop_menu_id_pressed)
 
 	result_panel.hide()

@@ -20,6 +20,8 @@ const LEVEL_BUTTON: PackedScene = preload("res://ui/menus/level_select/LevelButt
 
 func _ready() -> void:
 	SignalBus.time_bank_changed.connect(_on_time_bank_changed)
+	# Debug mode changes which tiles are playable, so the grid has to be rebuilt.
+	SignalBus.debug_unlock_changed.connect(_on_debug_unlock_changed)
 	back_button.pressed.connect(GameManager.go_to_main_menu)
 	leaderboard_button.pressed.connect(_on_leaderboard_pressed)
 	close_button.pressed.connect(leaderboard_overlay.hide)
@@ -61,6 +63,10 @@ func _refresh_bank() -> void:
 func _on_time_bank_changed(_seconds: float) -> void:
 	_refresh_bank()
 	# Best times move with the bank, so the tiles need redrawing too.
+	populate_levels()
+
+
+func _on_debug_unlock_changed(_enabled: bool) -> void:
 	populate_levels()
 
 

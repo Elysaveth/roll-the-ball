@@ -48,6 +48,19 @@ class_name PlaceableObject
 ## that are *meant* to be layered — ice planks crossing to form a junction, say.
 @export var exclusive_placement: bool = true
 
+@export_group("Breaking")
+## Breakable props shatter when hit hard enough, dropping the material the
+## workshop's blueprints are crafted from.
+@export var breakable: bool = false
+## Contact impulse needed to shatter this prop. A wood plank gives way to the ball
+## itself; stone should really only yield to an explosion.
+@export var break_impulse: float = 900.0
+## Material granted on breaking, e.g. "wood_chips". Empty means it drops nothing.
+@export var material_id: String = ""
+@export var material_amount: int = 1
+@export var debris_count: int = 6
+@export var debris_colour: Color = Color(0.55, 0.45, 0.36)
+
 ## How far cursor resizing may take a prop. Uniform only — a non-uniform scale on
 ## a RigidBody2D hands the physics engine a shape it can't represent, and
 ## collisions stop matching what's drawn.
@@ -85,6 +98,7 @@ var _scale_before: float = 1.0
 ## This prop's own collision shapes, used to test placement. Gathered once — a
 ## prop's shapes don't change at runtime.
 var _own_shapes: Array[CollisionShape2D] = []
+var _broken: bool = false
 
 
 func _ready() -> void:
@@ -100,6 +114,11 @@ func _ready() -> void:
 	# the player holding nothing.
 	SignalBus.mode_changed.connect(_on_mode_transition)
 	_collect_own_shapes()
+	if breakable:
+		# Contact reporting is the only way to learn how hard something was hit, and
+		# it's off by default because it costs solver work on every body.
+		contact_monitor = true
+		max_contacts_reported = maxi(max_contacts_reported, 4)
 	# _process is only needed while a gesture is running; with a canvas full of
 	# props, leaving it on for every one of them is pure waste.
 	set_process(false)
@@ -500,7 +519,7 @@ func _can_begin_gesture() -> bool:
 
 func _refresh_processing() -> void:
 	# Only _process is managed here. _physics_process is left alone so subclasses
-	# that need it for their own behaviour — Bomb's fuse — stay in charge of it.
+	# that need it for their own behaviour — an Explosive's fuse — stay in charge of it.
 	set_process(_dragging or _rotating or _scaling)
 
 
@@ -508,6 +527,58 @@ func _cancel_all_gestures() -> void:
 	_end_drag()
 	cancel_rotate()
 	cancel_scale()
+
+
+# -------------------------------------------------------------- breaking ----
+
+## Subclasses overriding this must call super(state), or the prop stops breaking.
+func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	if not breakable or _broken or freeze:
+		# A frozen (anchored) prop reports no contacts, so it can only be broken by
+		# something calling try_break() directly — an explosion, typically.
+		return
+	for i in state.get_contact_count():
+		var impulse: float = state.get_contact_impulse(i).length()
+		if impulse >= break_impulse:
+			try_break(impulse)
+			return
+
+
+## Attempts to shatter the prop with `force`. Returns whether it actually broke, so
+## a blast can tell what it destroyed. Safe to call on anything — non-breakable
+## props just say no.
+func try_break(force: float) -> bool:
+	if not breakable or _broken or force < break_impulse:
+		return false
+	_shatter()
+	return true
+
+
+func _shatter() -> void:
+	_broken = true
+	_spawn_debris()
+	# Feeds the workshop: blueprints are paid for in materials from broken props.
+	SaveManager.record_break(prop_id, material_id, material_amount)
+	SignalBus.prop_broken.emit(prop_id, material_id, global_position)
+	detach_and_free()
+
+
+func _spawn_debris() -> void:
+	var host: Node = get_parent()
+	if host == null or debris_count <= 0:
+		return
+	# Parented to the container rather than to this prop, which is about to go.
+	for i in debris_count:
+		var angle: float = randf_range(0.0, TAU)
+		var speed: float = randf_range(120.0, 340.0)
+		var piece: Debris = Debris.create(
+			debris_colour,
+			randf_range(5.0, 11.0),
+			global_position + Vector2.from_angle(angle) * randf_range(0.0, 24.0),
+			Vector2.from_angle(angle) * speed,
+			randf_range(-9.0, 9.0)
+		)
+		host.add_child(piece)
 
 
 # -------------------------------------------------------------- removal ----

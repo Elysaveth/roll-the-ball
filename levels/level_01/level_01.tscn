@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=22 format=3]
 
 [ext_resource type="Script" path="res://levels/Level.gd" id="1_level"]
 [ext_resource type="Script" path="res://levels/Goal.gd" id="2_goal"]
@@ -7,6 +7,16 @@
 [ext_resource type="PackedScene" path="res://entities/props/moai/moai.tscn" id="5_moai"]
 [ext_resource type="PackedScene" path="res://entities/props/pinball/pinball.tscn" id="6_pinball"]
 [ext_resource type="PackedScene" path="res://entities/props/bomb/bomb.tscn" id="7_bomb"]
+[ext_resource type="PackedScene" path="res://entities/props/madera/madera.tscn" id="8_madera"]
+[ext_resource type="PackedScene" path="res://entities/props/metal/metal.tscn" id="9_metal"]
+[ext_resource type="PackedScene" path="res://entities/props/cañon/canon.tscn" id="10_canon"]
+[ext_resource type="PackedScene" path="res://entities/props/muelle/muelle.tscn" id="11_muelle"]
+[ext_resource type="PackedScene" path="res://entities/props/dinamita/dinamita.tscn" id="12_dina"]
+[ext_resource type="PackedScene" path="res://entities/props/tntminecraft/tntminecraft.tscn" id="13_tnt"]
+[ext_resource type="PackedScene" path="res://entities/props/cohete_little/cohete_little.tscn" id="14_rl"]
+[ext_resource type="PackedScene" path="res://entities/props/cohete_big/cohete_big.tscn" id="15_rb"]
+[ext_resource type="PackedScene" path="res://entities/props/portal_in/portal_in.tscn" id="16_pin"]
+[ext_resource type="PackedScene" path="res://entities/props/portal_out/portal_out.tscn" id="17_pout"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_stone"]
 friction = 0.6
@@ -29,7 +39,7 @@ size = Vector2(260, 110)
 
 [node name="Level01" type="Node2D"]
 script = ExtResource("1_level")
-available_props = Array[PackedScene]([ExtResource("4_hielo"), ExtResource("5_moai"), ExtResource("6_pinball"), ExtResource("7_bomb")])
+available_props = Array[PackedScene]([ExtResource("4_hielo"), ExtResource("8_madera"), ExtResource("9_metal"), ExtResource("5_moai"), ExtResource("6_pinball"), ExtResource("11_muelle"), ExtResource("10_canon"), ExtResource("14_rl"), ExtResource("15_rb"), ExtResource("7_bomb"), ExtResource("12_dina"), ExtResource("13_tnt"), ExtResource("16_pin"), ExtResource("17_pout")])
 ball_scene = ExtResource("3_ball")
 display_name = "Primer rodaje"
 

@@ -21,6 +21,10 @@ run/main_scene="res://ui/menus/main_menu/MainMenu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
+[audio]
+
+buses/default_bus_layout="res://assets/audio/default_bus_layout.tres"
+
 [autoload]
 
 SilentWolf="*res://addons/silent_wolf/SilentWolf.gd"
@@ -30,6 +34,7 @@ GameManager="*res://globals/GameManager.gd"
 SaveManager="*res://globals/SaveManager.gd"
 LeaderboardApi="*res://globals/LeaderboardAPI.gd"
 CursorManager="*res://globals/CursorManager.gd"
+ColorblindOverlay="*res://ui/common/ColorblindOverlay.tscn"
 
 [display]
 

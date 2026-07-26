@@ -41,6 +41,12 @@ signal player_name_changed(player_name: String)
 ## .tscn need to rebuild it when this fires; Godot re-translates Control.text
 @warning_ignore("unused_signal")
 signal locale_changed(locale: String)
+@warning_ignore("unused_signal")
+signal colorblind_mode_changed(mode: int)
+## Debug unlock toggled. Level select and the prop palette rebuild from this,
+## because what they show depends on it.
+@warning_ignore("unused_signal")
+signal debug_unlock_changed(enabled: bool)
 
 # -- Progression --
 @warning_ignore("unused_signal")
@@ -59,6 +65,10 @@ signal object_removed(obj: Node2D)
 ## Left as Node2D so this file never depends on the global class cache.
 @warning_ignore("unused_signal")
 signal prop_context_requested(prop: Node2D)
+## A prop shattered. Carries what it was and where, so the HUD can show a material
+## pickup and audio can place the sound.
+@warning_ignore("unused_signal")
+signal prop_broken(prop_id: String, material_id: String, at: Vector2)
 
 # -- Save / load (see globals/SaveManager.gd) --
 @warning_ignore("unused_signal")

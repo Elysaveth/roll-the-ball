@@ -1,0 +1,39 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://entities/props/Explosive.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://entities/props/tntminecraft/tntminecraft.png" id="2_tex"]
+[ext_resource type="PackedScene" path="res://entities/effects/explosion/explosion.tscn" id="3_boom"]
+
+[sub_resource type="AtlasTexture" id="Atlas_main"]
+atlas = ExtResource("2_tex")
+region = Rect2(410, 29, 1104, 1017)
+
+[sub_resource type="RectangleShape2D" id="Shape_body"]
+size = Vector2(140, 130)
+
+[sub_resource type="CircleShape2D" id="Shape_trigger"]
+radius = 90.0
+
+[node name="Tnt" type="RigidBody2D"]
+script = ExtResource("1_script")
+mass = 12.0
+prop_id = "tntminecraft"
+object_name = "TNT"
+explosion_scene = ExtResource("3_boom")
+blast_radius = 420.0
+blast_force = 3000.0
+fuse_seconds = 1.2
+break_power = 2.0
+shake_strength = 26.0
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.13, 0.13)
+texture = SubResource("Atlas_main")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("Shape_body")
+
+[node name="Trigger" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
+shape = SubResource("Shape_trigger")

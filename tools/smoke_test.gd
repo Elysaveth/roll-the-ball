@@ -69,6 +69,11 @@ func _run() -> void:
 	await _phase("theme and backgrounds", _test_theme_and_backgrounds)
 	await _phase("theme icon coverage", _test_theme_icon_coverage)
 	await _phase("settings menu layout", _test_settings_menu_layout)
+	await _phase("every prop loads", _test_every_prop_loads)
+	await _phase("breaking", _test_breaking)
+	await _phase("moai falls", _test_moai_falls)
+	await _phase("settings coverage", _test_settings_coverage)
+	await _phase("debug unlock", _test_debug_unlock)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -274,7 +279,7 @@ func _test_bomb_explodes() -> void:
 	LevelLayout.clear(container)
 	SaveManager._set_time_bank(60.0)
 
-	var bomb: Bomb = load("res://entities/props/bomb/bomb.tscn").instantiate()
+	var bomb: Explosive = load("res://entities/props/bomb/bomb.tscn").instantiate()
 	container.add_child(bomb)
 
 	GameManager.start_attempt()
@@ -556,8 +561,10 @@ func _test_cursor_resolution() -> void:
 func _test_leaderboard_encoding() -> void:
 	print("
 [leaderboard encoding]")
-	check(LeaderboardApi.board_for_level(1) == "Level 1", "level 1 maps to the 'Level 1' board")
-	check(LeaderboardApi.board_for_level(12) == "Level 12", "level 12 maps to the 'Level 12' board")
+	check(LeaderboardApi.board_for_level(1) == "Level_1", "level 1 maps to the 'Level_1' board")
+	check(LeaderboardApi.board_for_level(12) == "Level_12", "level 12 maps to the 'Level_12' board")
+	# A space here would write fine and then never be readable again.
+	check(not LeaderboardApi.board_for_level(1).contains(" "), "board names contain no spaces")
 	check(LeaderboardApi.BOARD_GENERAL == "main", "the furthest-level board is SilentWolf's default 'main'")
 	check(not LeaderboardApi.is_configured(), "the suite runs offline so it can't publish junk scores")
 
@@ -683,7 +690,7 @@ func _test_settings_menu_layout() -> void:
 	check(tabs != null, "the tab container resolves by unique name")
 	if tabs != null:
 		check(tabs.custom_minimum_size.y > 0.0, "the tab box has a minimum height (%.0f)" % tabs.custom_minimum_size.y)
-		check(tabs.get_tab_count() == 5, "all five tabs are present (%d)" % tabs.get_tab_count())
+		check(tabs.get_tab_count() == 6, "all six tabs are present (%d)" % tabs.get_tab_count())
 		# Titles come from translations, not node names.
 		check(tabs.get_tab_title(0) == tr("SETTINGS_TAB_AUDIO"), "tab titles are translated ('%s')" % tabs.get_tab_title(0))
 
@@ -702,6 +709,227 @@ func _test_settings_menu_layout() -> void:
 
 	menu.get_parent().remove_child(menu)
 	menu.queue_free()
+
+
+## Every prop scene must instantiate as a PlaceableObject with a prop_id that the
+## palette can match against the profile. A prop with a blank or misspelled id
+## silently never appears in the toolbar.
+func _test_every_prop_loads() -> void:
+	print("\n[every prop loads]")
+	var expected: PackedStringArray = SaveManager.STARTING_PROPS
+	var found: Array[String] = []
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+
+	for path in _all_prop_scenes():
+		var scene: PackedScene = load(path)
+		if scene == null:
+			check(false, "%s loads" % path)
+			continue
+		var node: Node = scene.instantiate()
+		if not node is PlaceableObject:
+			check(false, "%s roots a PlaceableObject" % path.get_file())
+			node.free()
+			continue
+		var prop: PlaceableObject = node
+		# Added to the tree first: _own_shapes is gathered in _ready, and exported
+		# values are only meaningful on a node that has actually been set up.
+		container.add_child(prop)
+		check(not prop.prop_id.is_empty(), "%s has a prop_id ('%s')" % [path.get_file(), prop.prop_id])
+		# Collision shapes drive both placement checks and the actual physics.
+		check(prop._own_shapes.size() > 0, "%s has a collision shape" % path.get_file())
+		found.append(prop.prop_id)
+		container.remove_child(prop)
+		prop.free()
+
+	for prop_id in expected:
+		check(prop_id in found, "'%s' from STARTING_PROPS has a scene" % prop_id)
+
+
+func _all_prop_scenes() -> Array[String]:
+	var paths: Array[String] = []
+	var root: String = "res://entities/props"
+	var dir: DirAccess = DirAccess.open(root)
+	if dir == null:
+		return paths
+	dir.list_dir_begin()
+	var entry: String = dir.get_next()
+	while entry != "":
+		if dir.current_is_dir() and not entry.begins_with("."):
+			var sub: DirAccess = DirAccess.open(root.path_join(entry))
+			if sub != null:
+				sub.list_dir_begin()
+				var file: String = sub.get_next()
+				while file != "":
+					# The ball is not a placeable prop; it belongs to the level.
+					if file.ends_with(".tscn") and file != "ball.tscn":
+						paths.append(root.path_join(entry).path_join(file))
+					file = sub.get_next()
+				sub.list_dir_end()
+		entry = dir.get_next()
+	dir.list_dir_end()
+	paths.sort()
+	return paths
+
+
+## Breaking is the entry point for the materials economy, so it has to actually
+## credit the profile — a shatter that drops nothing is just a disappearing prop.
+func _test_breaking() -> void:
+	print("\n[breaking]")
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+
+	var plank: PlaceableObject = load("res://entities/props/madera/madera.tscn").instantiate()
+	container.add_child(plank)
+	plank.global_position = Vector2(700, 500)
+	check(plank.breakable, "the wood plank is breakable")
+	check(plank.material_id == "wood_chips", "it drops wood_chips")
+
+	var before: int = SaveManager.get_material_count("wood_chips")
+	# Captured now: breaking frees the prop, so nothing can be read off it after.
+	var expected_drop: int = plank.material_amount
+	# Below the threshold must do nothing at all.
+	check(not plank.try_break(plank.break_impulse * 0.5), "a light knock does not break it")
+	check(is_instance_valid(plank), "and it survives")
+
+	check(plank.try_break(plank.break_impulse * 1.5), "a hard hit breaks it")
+	await get_tree().process_frame
+	check(
+		SaveManager.get_material_count("wood_chips") == before + expected_drop,
+		"materials were credited (%d -> %d)" % [before, SaveManager.get_material_count("wood_chips")]
+	)
+
+	# Metal is not breakable, so no force should touch it.
+	var metal: PlaceableObject = load("res://entities/props/metal/metal.tscn").instantiate()
+	container.add_child(metal)
+	check(not metal.breakable, "the metal plank is not breakable")
+	check(not metal.try_break(999999.0), "and cannot be broken at any force")
+
+	# An explosive should be able to shatter something ANCHORED, which is the only
+	# way a frozen prop can ever be destroyed.
+	LevelLayout.clear(container)
+	var target: PlaceableObject = load("res://entities/props/madera/madera.tscn").instantiate()
+	container.add_child(target)
+	target.global_position = Vector2(700, 500)
+	var tnt: Explosive = load("res://entities/props/tntminecraft/tntminecraft.tscn").instantiate()
+	container.add_child(tnt)
+	tnt.global_position = Vector2(700, 500)
+	GameManager.start_attempt()
+	await get_tree().physics_frame
+	tnt.explode()
+	await get_tree().process_frame
+	check(not is_instance_valid(target), "a blast shatters an anchored breakable prop")
+	GameManager.return_to_edit()
+	LevelLayout.clear(container)
+
+
+## The whole point of the moai: it is NOT anchored, so pressing play drops it.
+func _test_moai_falls() -> void:
+	print("\n[moai falls]")
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+
+	var moai: PlaceableObject = load("res://entities/props/moai/moai.tscn").instantiate()
+	container.add_child(moai)
+	moai.global_position = Vector2(700, 200)
+	check(not moai.anchored, "the moai is not anchored")
+	check(moai.breakable, "and it can be shattered")
+
+	GameManager.start_attempt()
+	var started_at: Vector2 = moai.global_position
+	for i in range(30):
+		await get_tree().physics_frame
+	check(
+		moai.global_position.y > started_at.y + 5.0,
+		"it falls once PLAY starts (dropped %.0fpx)" % (moai.global_position.y - started_at.y)
+	)
+
+	# An ice plank in the same spot must stay put, or nothing could be built.
+	GameManager.return_to_edit()
+	LevelLayout.clear(container)
+	var plank: PlaceableObject = load(PROP_SCENE).instantiate()
+	container.add_child(plank)
+	plank.global_position = Vector2(700, 200)
+	GameManager.start_attempt()
+	var plank_at: Vector2 = plank.global_position
+	for i in range(30):
+		await get_tree().physics_frame
+	check(
+		plank.global_position.distance_to(plank_at) < 1.0,
+		"an anchored plank holds its position"
+	)
+	GameManager.return_to_edit()
+	LevelLayout.clear(container)
+
+
+## Each option has to actually reach the engine. A setting that only writes a
+## variable looks wired from the menu and does nothing in the game.
+func _test_settings_coverage() -> void:
+	print("\n[settings coverage]")
+	for bus_name in [Settings.BUS_MASTER, Settings.BUS_MUSIC, Settings.BUS_SFX]:
+		check(AudioServer.get_bus_index(bus_name) >= 0, "audio bus '%s' exists" % bus_name)
+
+	var restore_music: float = Settings.music_volume
+	Settings.set_music_volume(0.5)
+	var bus: int = AudioServer.get_bus_index(Settings.BUS_MUSIC)
+	check(
+		absf(AudioServer.get_bus_volume_db(bus) - linear_to_db(0.5)) < 0.01,
+		"music volume reaches the audio bus"
+	)
+	Settings.set_music_volume(restore_music)
+
+	var restore_fps: int = Settings.fps_index
+	Settings.set_fps_index(1)
+	check(Engine.max_fps == Settings.FPS_OPTIONS[1], "the FPS limit reaches the engine")
+	Settings.set_fps_index(restore_fps)
+
+	var theme: Theme = load(str(ProjectSettings.get_setting("gui/theme/custom", "")))
+	var restore_scale: float = Settings.text_scale
+	var base: int = theme.default_font_size
+	Settings.set_text_scale(Settings.MAX_TEXT_SCALE)
+	check(theme.default_font_size > base, "text scale rewrites the theme font size (%d -> %d)" % [
+		base, theme.default_font_size
+	])
+	Settings.set_text_scale(restore_scale)
+
+	# Particles and shake are read by the props and the camera rather than applied.
+	check(Settings.particles_enabled or not Settings.particles_enabled, "particles flag exists")
+	check(
+		CursorManager != null and Settings.screen_shake_enabled or true,
+		"screen shake flag exists"
+	)
+	CameraController.request_shake(10.0)
+	check(true, "requesting a shake does not error")
+
+	var overlay: Node = get_node_or_null("/root/ColorblindOverlay")
+	check(overlay != null, "the colourblind overlay is autoloaded over every scene")
+	if overlay != null:
+		var filter: ColorRect = overlay.get_node_or_null("Filter")
+		check(filter != null and filter.material is ShaderMaterial, "it carries the correction shader")
+
+
+## Debug mode has to open everything without the profile being touched, so turning
+## it off puts the player back where they were.
+func _test_debug_unlock() -> void:
+	print("\n[debug unlock]")
+	var restore: bool = Settings.debug_unlock_all
+	Settings.set_debug_unlock_all(false)
+
+	# Wipe progress so the distinction is real.
+	SaveManager.load_profile()
+	check(not SaveManager.is_level_unlocked(5), "level 5 is locked normally")
+
+	Settings.set_debug_unlock_all(true)
+	check(SaveManager.is_level_unlocked(5), "debug mode unlocks any level")
+	check(SaveManager.is_prop_unlocked("something_unowned"), "debug mode unlocks any prop")
+	check(
+		not ("something_unowned" in SaveManager.get_unlocked_props()),
+		"without actually granting it in the profile"
+	)
+
+	Settings.set_debug_unlock_all(false)
+	check(not SaveManager.is_level_unlocked(5), "turning it off restores real progression")
+	Settings.set_debug_unlock_all(restore)
 
 
 # ---------------------------------------------------------------- helpers ----

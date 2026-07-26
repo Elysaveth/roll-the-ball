@@ -158,11 +158,6 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "SETTINGS_SCREEN_SHAKE"
 
-[node name="MotionBlurToggle" type="CheckButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Visuals"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "SETTINGS_MOTION_BLUR"
-
 [node name="Accessibility" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
 visible = false
 layout_mode = 2
@@ -238,3 +233,20 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 text = "LB_CLOSE"
+
+[node name="Debug" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 18
+metadata/_tab_index = 5
+
+[node name="DebugUnlockAll" type="CheckButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Debug"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SETTINGS_DEBUG_UNLOCK_ALL"
+
+[node name="DebugNote" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Debug"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_DEBUG_NOTE"
+autowrap_mode = 3

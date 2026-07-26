@@ -1,0 +1,40 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://entities/props/Rocket.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://entities/props/cohete_big/cohete_big.png" id="2_tex"]
+[ext_resource type="PackedScene" path="res://entities/effects/explosion/explosion.tscn" id="3_boom"]
+
+[sub_resource type="AtlasTexture" id="Atlas_main"]
+atlas = ExtResource("2_tex")
+region = Rect2(563, 832, 270, 300)
+
+[sub_resource type="RectangleShape2D" id="Shape_body"]
+size = Vector2(84, 96)
+
+[sub_resource type="CircleShape2D" id="Shape_trigger"]
+radius = 64.0
+
+[node name="CoheteBig" type="RigidBody2D"]
+script = ExtResource("1_script")
+mass = 9.0
+prop_id = "cohete_big"
+object_name = "Big rocket"
+anchored = false
+thrust = 4200.0
+burn_seconds = 1.4
+thrust_direction = Vector2(0, -1)
+explosion_scene = ExtResource("3_boom")
+explosion_radius = 260.0
+explosion_force = 1800.0
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.34, 0.34)
+texture = SubResource("Atlas_main")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("Shape_body")
+
+[node name="Trigger" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
+shape = SubResource("Shape_trigger")

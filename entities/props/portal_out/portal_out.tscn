@@ -1,0 +1,33 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/props/Portal.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://entities/props/portal_out/portal_out.png" id="2_tex"]
+
+[sub_resource type="AtlasTexture" id="Atlas_main"]
+atlas = ExtResource("2_tex")
+region = Rect2(225, 177, 278, 54)
+
+[sub_resource type="RectangleShape2D" id="Shape_body"]
+size = Vector2(160, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_trigger"]
+size = Vector2(150, 48)
+
+[node name="PortalOut" type="RigidBody2D"]
+script = ExtResource("1_script")
+mass = 30.0
+prop_id = "portal_out"
+object_name = "Portal out"
+is_exit = true
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.6, 0.6)
+texture = SubResource("Atlas_main")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("Shape_body")
+
+[node name="Trigger" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
+shape = SubResource("Shape_trigger")

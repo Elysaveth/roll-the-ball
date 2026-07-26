@@ -74,3 +74,10 @@ SETTINGS_LANGUAGE,Language,Idioma
 SETTINGS_TEXT_SIZE,Text size,Tamaño del texto
 SETTINGS_COLORBLIND,Colourblind mode,Modo daltónico
 SETTINGS_CLOSED_CAPTIONS,Closed captions,Subtítulos
+SETTINGS_TAB_DEBUG,"Debug","Depuracion"
+SETTINGS_DEBUG_UNLOCK_ALL,"Unlock all levels and props","Desbloquear todos los niveles y objetos"
+SETTINGS_DEBUG_NOTE,"For testing and building content. Progress is still saved normally.","Para pruebas y creacion de contenido. El progreso se guarda igualmente."
+SETTINGS_COLORBLIND_OFF,"Off","Desactivado"
+SETTINGS_COLORBLIND_PROTANOPIA,"Protanopia (red-blind)","Protanopia (sin rojo)"
+SETTINGS_COLORBLIND_DEUTERANOPIA,"Deuteranopia (green-blind)","Deuteranopia (sin verde)"
+SETTINGS_COLORBLIND_TRITANOPIA,"Tritanopia (blue-blind)","Tritanopia (sin azul)"

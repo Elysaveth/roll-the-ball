@@ -49,8 +49,20 @@ enum ValueFormat {
 ## Board holding the furthest completed level per player. This is SilentWolf's
 ## default board name — what save_score() writes to when given no board.
 const BOARD_GENERAL: String = "main"
-## Level board names, matching what exists in the SilentWolf dashboard.
-const BOARD_LEVEL_TEMPLATE: String = "Level %d"
+## Level board names.
+##
+## NO SPACES, and this matters more than it looks. SilentWolf is asymmetric about
+## board names: save_score() sends it inside a JSON POST body, where a space is
+## fine, but get_scores() and delete_score() paste it straight into a GET query
+## string with no URL-encoding. A name like "Level 1" therefore writes happily and
+## can then NEVER be read back or cleaned up — the request is malformed and the
+## response isn't even JSON. Percent-encoding doesn't rescue it either.
+##
+## Verified against the live API: "Level_1", "Level1" and unknown names all return
+## success with zero scores, while "Level 1" and "Level%201" both fail to parse.
+##
+## So boards must be created in the dashboard as Level_1, Level_2, ...
+const BOARD_LEVEL_TEMPLATE: String = "Level_%d"
 ## Must exceed any achievable time. The entire bank is 60s, so this is ample.
 const TIME_SCORE_BASE: float = 1000.0
 const DEFAULT_MAX_SCORES: int = 10
@@ -179,6 +191,13 @@ func _on_goal_reached(level_id: int, attempt_time: float, bank_delta: float) -> 
 func _enqueue(request: Dictionary) -> void:
 	if not is_configured():
 		_fail(request, "not configured")
+		return
+	# Caught here rather than left to fail mysteriously at read time — see
+	# BOARD_LEVEL_TEMPLATE for why a space is fatal.
+	var board: String = str(request.get("board", ""))
+	if board.contains(" ") or board.contains("%"):
+		push_error("LeaderboardApi: board name '%s' contains a character that breaks SilentWolf's GET requests — scores written here could never be read back." % board)
+		_fail(request, "invalid board name")
 		return
 	_queue.append(request)
 	_pump()

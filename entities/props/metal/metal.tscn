@@ -1,0 +1,30 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/props/PlaceableObject.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://entities/props/metal/metal.png" id="2_tex"]
+
+[sub_resource type="AtlasTexture" id="Atlas_main"]
+atlas = ExtResource("2_tex")
+region = Rect2(492, 910, 424, 37)
+
+[sub_resource type="PhysicsMaterial" id="Mat_main"]
+friction = 0.25
+bounce = 0.25
+
+[sub_resource type="RectangleShape2D" id="Shape_body"]
+size = Vector2(212, 20)
+
+[node name="Metal" type="RigidBody2D"]
+script = ExtResource("1_script")
+mass = 40.0
+prop_id = "metal"
+object_name = "Metal plank"
+exclusive_placement = false
+physics_material_override = SubResource("Mat_main")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.5, 0.5)
+texture = SubResource("Atlas_main")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("Shape_body")

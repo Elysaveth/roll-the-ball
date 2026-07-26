@@ -20,9 +20,24 @@ class_name CameraController
 @export var min_zoom: float = 0.3
 @export var max_zoom: float = 3.0
 
+@export_group("Shake")
+## Pixels of shake at full strength, and how fast it dies away.
+@export var shake_decay: float = 40.0
+
 ## Static so CursorManager can ask whether the view is being dragged without
 ## holding a reference to whichever camera is currently in the tree.
 static var _panning: bool = false
+## Pending shake, posted by whatever exploded. Static for the same reason: an
+## explosive shouldn't have to find the camera to make the screen jolt.
+static var _shake_request: float = 0.0
+
+var _shake: float = 0.0
+
+
+## Asks for a jolt of `strength` pixels. Louder requests win; they don't stack, so a
+## chain of explosions can't shake the view off the screen.
+static func request_shake(strength: float) -> void:
+	_shake_request = maxf(_shake_request, strength)
 
 var _dragging: bool = false
 var _drag_start_mouse: Vector2
@@ -39,12 +54,31 @@ func _exit_tree() -> void:
 
 
 func _process(delta: float) -> void:
+	_update_shake(delta)
+
 	var direction: Vector2 = Input.get_vector("camera_left", "camera_right", "camera_up", "camera_down")
 	if direction == Vector2.ZERO:
 		return
 	# Divided by zoom so a keypress always slides the view the same number of
 	# screen pixels, whether zoomed right in or right out.
 	position += direction * keyboard_pan_speed * delta / zoom.x
+
+
+## Shake rides on `offset`, never on `position` — position is what panning owns, and
+## mixing the two would leave the view permanently nudged after every explosion.
+func _update_shake(delta: float) -> void:
+	if _shake_request > 0.0:
+		if Settings.screen_shake_enabled:
+			_shake = maxf(_shake, _shake_request)
+		_shake_request = 0.0
+
+	if _shake <= 0.0:
+		if offset != Vector2.ZERO:
+			offset = Vector2.ZERO
+		return
+
+	_shake = move_toward(_shake, 0.0, shake_decay * delta)
+	offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _shake
 
 
 func _unhandled_input(event: InputEvent) -> void:
