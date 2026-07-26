@@ -41,7 +41,7 @@ rotation = 0.45
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/LeftLedge"]
-color = Color(0.31, 0.35, 0.42, 1)
+color = Color(0.353, 0.29, 0.235, 1)
 polygon = PackedVector2Array(-150, -20, 150, -20, 150, 20, -150, 20)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/LeftLedge"]
@@ -52,7 +52,7 @@ position = Vector2(960, 1180)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/Floor"]
-color = Color(0.24, 0.26, 0.31, 1)
+color = Color(0.29, 0.243, 0.2, 1)
 polygon = PackedVector2Array(-1300, -30, 1300, -30, 1300, 30, -1300, 30)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/Floor"]
@@ -63,7 +63,7 @@ position = Vector2(1100, 860)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketFloor"]
-color = Color(0.31, 0.35, 0.42, 1)
+color = Color(0.353, 0.29, 0.235, 1)
 polygon = PackedVector2Array(-150, -20, 150, -20, 150, 20, -150, 20)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/BasketFloor"]
@@ -74,7 +74,7 @@ position = Vector2(960, 760)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketWallLeft"]
-color = Color(0.31, 0.35, 0.42, 1)
+color = Color(0.353, 0.29, 0.235, 1)
 polygon = PackedVector2Array(-10, -80, 10, -80, 10, 80, -10, 80)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/BasketWallLeft"]
@@ -85,7 +85,7 @@ position = Vector2(1240, 760)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketWallRight"]
-color = Color(0.31, 0.35, 0.42, 1)
+color = Color(0.353, 0.29, 0.235, 1)
 polygon = PackedVector2Array(-10, -80, 10, -80, 10, 80, -10, 80)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/BasketWallRight"]
@@ -99,7 +99,7 @@ position = Vector2(1100, 805)
 script = ExtResource("2_goal")
 
 [node name="Polygon2D" type="Polygon2D" parent="Goal"]
-color = Color(0.35, 0.85, 0.45, 0.25)
+color = Color(0.431, 0.541, 0.341, 0.3)
 polygon = PackedVector2Array(-130, -55, 130, -55, 130, 55, -130, 55)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Goal"]

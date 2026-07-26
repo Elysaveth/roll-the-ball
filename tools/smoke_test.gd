@@ -7,11 +7,17 @@ extends Node
 # Exits with the number of failed checks, so it doubles as a CI gate.
 #
 # It backs up and restores user://profile.json and user://saves/ around the run,
-# because it deliberately writes junk into both.
+# because it deliberately writes junk into both, and forces LeaderboardApi offline
+# so it can never publish to the live leaderboards.
+#
+# A SCRIPT ERROR anywhere in the output means coverage was lost even if the summary
+# says everything passed — _phase() catches a section that produced no checks at
+# all, but not one that aborted halfway. Grep for it.
 
 const PROP_SCENE: String = "res://entities/props/hielo/hielo.tscn"
 
 var _failures: int = 0
+var _checks_run: int = 0
 var _backup: Dictionary = {}
 var _main: Node = null
 
@@ -30,6 +36,10 @@ func _ready() -> void:
 
 
 func _run() -> void:
+	# Before anything else: this suite drives goal_reached repeatedly, and
+	# LeaderboardApi publishes on that. Without this, a test run would spray junk
+	# times onto the live boards.
+	LeaderboardApi.offline = true
 	_reset_profile()
 
 	# Wait a frame before touching root: during our own _ready the tree is still
@@ -39,21 +49,39 @@ func _run() -> void:
 	get_tree().root.add_child(_main)
 	await get_tree().process_frame
 
-	_test_input_actions_exist()
-	_test_hud_is_wired()
-	await _test_level_loads()
-	await _test_snapshot_restores_layout()
-	await _test_bank_charges_and_refunds()
-	await _test_time_up_freezes()
-	await _test_level_01_is_a_puzzle()
-	await _test_bomb_explodes()
-	await _test_goal_through_physics()
-	await _test_transforms_round_trip()
-	_test_scale_clamping()
-	_test_player_name()
-	_test_translations()
-	await _test_exclusive_placement()
-	await _test_cursor_resolution()
+	await _phase("input actions", _test_input_actions_exist)
+	await _phase("HUD is wired", _test_hud_is_wired)
+	await _phase("level loads", _test_level_loads)
+	await _phase("snapshot restores layout", _test_snapshot_restores_layout)
+	await _phase("bank charges and refunds", _test_bank_charges_and_refunds)
+	await _phase("time up freezes", _test_time_up_freezes)
+	await _phase("level 01 is a puzzle", _test_level_01_is_a_puzzle)
+	await _phase("bomb explodes", _test_bomb_explodes)
+	await _phase("goal through physics", _test_goal_through_physics)
+	await _phase("transforms round trip", _test_transforms_round_trip)
+	await _phase("scale clamping", _test_scale_clamping)
+	await _phase("player name", _test_player_name)
+	await _phase("translations", _test_translations)
+	await _phase("exclusive placement", _test_exclusive_placement)
+	await _phase("cursor resolution", _test_cursor_resolution)
+	await _phase("leaderboard encoding", _test_leaderboard_encoding)
+	await _phase("remappable actions", _test_remappable_actions)
+	await _phase("theme and backgrounds", _test_theme_and_backgrounds)
+
+
+## Runs one section and guards against silent coverage loss.
+##
+## A GDScript runtime error — a typo'd method, a null deref — aborts only the
+## function it happens in and hands control back here. The section then contributes
+## no checks, so without this the suite would happily print ALL CHECKS PASSED while
+## having skipped a whole area. Any SCRIPT ERROR in the output means the same thing;
+## treat one as a failure even when the summary looks clean.
+func _phase(label: String, section: Callable) -> void:
+	var before: int = _checks_run
+	await section.call()
+	if _checks_run == before:
+		_failures += 1
+		print("  FAIL  section '%s' ran no checks — it aborted early (look for SCRIPT ERROR above)" % label)
 
 
 # ----------------------------------------------------------------- tests ----
@@ -520,6 +548,86 @@ func _test_cursor_resolution() -> void:
 	LevelLayout.clear(container)
 
 
+## The inversion that works around SilentWolf ranking descending only. If encode
+## and decode ever drift apart, every displayed time becomes silently wrong — no
+## crash, just nonsense on the board.
+func _test_leaderboard_encoding() -> void:
+	print("
+[leaderboard encoding]")
+	check(LeaderboardApi.board_for_level(1) == "Level 1", "level 1 maps to the 'Level 1' board")
+	check(LeaderboardApi.board_for_level(12) == "Level 12", "level 12 maps to the 'Level 12' board")
+	check(LeaderboardApi.BOARD_GENERAL == "main", "the furthest-level board is SilentWolf's default 'main'")
+	check(not LeaderboardApi.is_configured(), "the suite runs offline so it can't publish junk scores")
+
+	var board: String = LeaderboardApi.board_for_level(1)
+	for seconds in [0.0, 3.25, 12.5, 59.99]:
+		var wire: float = LeaderboardApi._encode(board, seconds)
+		var back: float = LeaderboardApi._decode(board, wire)
+		check(is_equal_approx(back, seconds), "%.2fs survives encode/decode (wire %.2f)" % [seconds, wire])
+
+	# Faster must store HIGHER, or descending ranking puts the slowest on top.
+	check(
+		LeaderboardApi._encode(board, 3.0) > LeaderboardApi._encode(board, 9.0),
+		"a faster time stores as a higher score"
+	)
+	# The general board holds level numbers, where higher already means better.
+	check(
+		is_equal_approx(LeaderboardApi._encode(LeaderboardApi.BOARD_GENERAL, 7.0), 7.0),
+		"the general board is stored unmodified"
+	)
+
+
+## The Controls tab builds itself from this list, so an empty one means the tab is
+## silently blank.
+func _test_remappable_actions() -> void:
+	print("
+[remappable actions]")
+	var actions: Array[String] = Settings.get_remappable_actions()
+	check(not actions.is_empty(), "actions were discovered (%d found)" % actions.size())
+	for expected in ["toggle_play", "rotate_prop", "scale_prop", "camera_left"]:
+		check(expected in actions, "'%s' is listed" % expected)
+	var has_builtin: bool = false
+	for action in actions:
+		if action.begins_with("ui_"):
+			has_builtin = true
+	check(not has_builtin, "Godot's built-in ui_* actions are excluded")
+	# Falls back to a prettified name, so this must never return the raw key.
+	var label: String = KeyMapButton.action_display_name("rotate_prop")
+	check(label != "ACTION_ROTATE_PROP" and not label.is_empty(), "action names resolve to '%s'" % label)
+
+
+func _test_theme_and_backgrounds() -> void:
+	print("
+[theme and backgrounds]")
+	var theme_path: String = str(ProjectSettings.get_setting("gui/theme/custom", ""))
+	check(theme_path != "", "a project-wide default theme is registered")
+	var theme: Theme = load(theme_path) if theme_path != "" else null
+	check(theme != null, "the theme resource loads")
+	if theme != null:
+		check(theme.has_stylebox("normal", "Button"), "Button has a themed normal stylebox")
+		check(theme.has_stylebox("panel", "PanelContainer"), "PanelContainer is themed")
+		check(theme.has_stylebox("panel", "PopupMenu"), "PopupMenu is themed")
+		check(theme.has_color("font_color", "Label"), "Label ink colour is themed")
+		var box: StyleBox = theme.get_stylebox("normal", "Button")
+		check(box is StyleBoxTexture, "buttons use the torn-paper texture box")
+		if box is StyleBoxTexture:
+			var textured: StyleBoxTexture = box
+			check(textured.texture != null, "the jagged texture is attached")
+			# Stretching would smear the teeth into streaks on wide controls.
+			check(
+				textured.axis_stretch_horizontal == StyleBoxTexture.AXIS_STRETCH_MODE_TILE,
+				"the torn edge tiles instead of stretching"
+			)
+
+	# The level background lives on a CanvasLayer behind the world.
+	var paper: Node = _main.get_node_or_null("Background/Paper")
+	check(paper is TextureRect and paper.texture != null, "levels have a paper background")
+	var layer: Node = _main.get_node_or_null("Background")
+	check(layer is CanvasLayer and layer.layer < 0, "it sits behind the world (layer %s)" % [
+		layer.layer if layer is CanvasLayer else "n/a"
+	])
+
+
 # ---------------------------------------------------------------- helpers ----
 
 func _finish_attempt_in(seconds: float) -> void:
@@ -536,6 +644,7 @@ func _first_prop(container: Node) -> PlaceableObject:
 
 
 func check(condition: bool, message: String) -> void:
+	_checks_run += 1
 	if condition:
 		print("  ok    %s" % message)
 	else:

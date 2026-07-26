@@ -3,15 +3,16 @@ extends Control
 # Settings owns user://settings.cfg and applies everything, including at boot, so
 # a language chosen last session is already in effect before this screen exists.
 #
-# The Controls tab is still the placeholder buttons from the original scene.
-# Wiring it up means replacing them with KeyMapButton instances (one per action:
-# camera_up/down/left/right, toggle_play, toggle_pause, rotate_prop, scale_prop);
-# KeyMapButton.gd is ready for that and takes a `mapped_action` before being
-# added to the tree.
+# The Controls tab is generated at runtime from whatever actions the project
+# defines, so adding an action to Project Settings is all it takes to get a
+# rebindable row for it — nobody has to touch this scene again.
+
+const KEY_MAP_ROW: PackedScene = preload("res://ui/menus/settings/KeyMapButton.tscn")
 
 @onready var master_slider: HSlider = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Audio/MasterSlider
 @onready var fps_option: OptionButton = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Display/FPSLimit
 @onready var language_option: OptionButton = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Accessibility/Language
+@onready var controls_tab: VBoxContainer = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Controls
 @onready var title_label: Label = $PanelContainer/MarginContainer/VBoxContainer/Title
 @onready var back_button: Button = $PanelContainer/MarginContainer/VBoxContainer/Back
 
@@ -21,6 +22,7 @@ func _ready() -> void:
 	back_button.text = "LB_CLOSE"
 
 	_populate_options()
+	_build_controls_tab()
 
 	master_slider.min_value = 0.0
 	master_slider.max_value = 1.0
@@ -58,3 +60,37 @@ func _show_current_values() -> void:
 func _on_locale_changed(_locale: String) -> void:
 	_populate_options()
 	_show_current_values()
+	# Action names are translated too.
+	_build_controls_tab()
+
+
+## One rebindable row per project-defined action, in the order they're declared in
+## Project Settings. The placeholder buttons that used to live in this tab are
+## cleared out first, so the scene needs no maintenance as actions come and go.
+func _build_controls_tab() -> void:
+	for child in controls_tab.get_children():
+		controls_tab.remove_child(child)
+		child.queue_free()
+
+	var actions: Array[String] = Settings.get_remappable_actions()
+	if actions.is_empty():
+		var empty: Label = Label.new()
+		empty.text = "CONTROLS_NONE"
+		controls_tab.add_child(empty)
+		return
+
+	for action in actions:
+		var row: Node = KEY_MAP_ROW.instantiate()
+		# Set before entering the tree: KeyMapButton reads it in _ready.
+		row.mapped_action = action
+		controls_tab.add_child(row)
+
+	var reset: Button = Button.new()
+	reset.text = "CONTROLS_RESET"
+	reset.pressed.connect(_on_reset_controls_pressed)
+	controls_tab.add_child(reset)
+
+
+func _on_reset_controls_pressed() -> void:
+	Settings.reset_keybindings()
+	_build_controls_tab()

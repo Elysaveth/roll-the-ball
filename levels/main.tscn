@@ -1,11 +1,26 @@
-[gd_scene load_steps=4 format=3 uid="uid://b1eq6ggu6r4ca"]
+[gd_scene load_steps=5 format=3 uid="uid://b1eq6ggu6r4ca"]
 
 [ext_resource type="Script" path="res://levels/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://systems/camera_system/CameraController.gd" id="2_camera"]
 [ext_resource type="PackedScene" path="res://ui/hud/hud.tscn" id="3_hud"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/Paper Texture7.jpg" id="4_paper7"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
+
+[node name="Background" type="CanvasLayer" parent="."]
+layer = -100
+
+[node name="Paper" type="TextureRect" parent="Background"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_paper7")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="World" type="Node2D" parent="."]
 

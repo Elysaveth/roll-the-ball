@@ -25,13 +25,17 @@ extends Node
 # checked as a belt-and-braces measure.
 #
 #
-# ONE THING TO CONFIGURE SERVER-SIDE
-# ----------------------------------
-# Level boards store times, where LOWER is better, and SilentWolf ranks higher
-# scores first by default. Set those boards to ascending in the SilentWolf
-# dashboard, or the leaderboard will show the slowest runs at the top. Nothing in
-# this file can fix that — inverting the number here would make every stored score
-# meaningless. The `progress` board wants the default descending order.
+# WHY TIMES ARE STORED INVERTED
+# -----------------------------
+# SilentWolf only ranks descending, and on a level board a LOWER time is better.
+# So a time goes up as TIME_SCORE_BASE minus the time, which makes the fastest run
+# the highest number and puts it on top.
+#
+# The inversion is confined to this file: submit_score() takes real seconds and
+# scores come back out as real seconds, so no screen ever sees a wire value. If
+# SilentWolf gains ascending boards later, deleting _encode/_decode and the
+# _is_time_board() check is the whole migration — though note that scores already
+# stored would need rewriting, since the base is baked into them.
 
 ## How a board's score column should be rendered. Lives here rather than on the
 ## leaderboard panel because reaching it through this autoload never depends on
@@ -42,9 +46,26 @@ enum ValueFormat {
 	LEVEL,   ## A level number, on the general progress board.
 }
 
-## Board holding the furthest completed level per player.
-const BOARD_GENERAL: String = "progress"
+## Board holding the furthest completed level per player. This is SilentWolf's
+## default board name — what save_score() writes to when given no board.
+const BOARD_GENERAL: String = "main"
+## Level board names, matching what exists in the SilentWolf dashboard.
+const BOARD_LEVEL_TEMPLATE: String = "Level %d"
+## Must exceed any achievable time. The entire bank is 60s, so this is ample.
+const TIME_SCORE_BASE: float = 1000.0
 const DEFAULT_MAX_SCORES: int = 10
+## Seconds to wait for SilentWolf before giving up on a request.
+##
+## Not optional. SilentWolf emits its completion signal from INSIDE its
+## `if status_check:` branch, so a non-2xx response, a rate limit or unparseable
+## JSON means the signal never fires at all. Awaiting it unguarded would leave
+## `_busy` true forever and no leaderboard request would ever run again.
+const REQUEST_TIMEOUT: float = 12.0
+
+## Set true to keep the game entirely off the network. The headless test suite uses
+## it so a test run can't publish junk scores to the live boards, and it's the hook
+## for an offline mode.
+var offline: bool = false
 
 var api_key: String = ""
 var game_id: String = ""
@@ -72,15 +93,38 @@ func _ready() -> void:
 ## False when there are no credentials, so screens can say "not configured"
 ## instead of spinning on a request that will never succeed.
 func is_configured() -> bool:
-	return not api_key.is_empty() and not game_id.is_empty()
+	return not offline and not api_key.is_empty() and not game_id.is_empty()
 
 
 static func board_for_level(level_id: int) -> String:
-	return "level_%02d" % level_id
+	return BOARD_LEVEL_TEMPLATE % level_id
+
+
+## True for boards whose scores are times and therefore stored inverted.
+static func _is_time_board(board: String) -> bool:
+	return board != BOARD_GENERAL
+
+
+## Real seconds -> the number actually stored. Clamped at zero so a freak time
+## beyond the base can't wrap into a leading score.
+static func _encode(board: String, value: float) -> float:
+	if not _is_time_board(board):
+		return value
+	return maxf(0.0, TIME_SCORE_BASE - value)
+
+
+## The stored number -> real seconds. Deliberately the same arithmetic as
+## _encode, so the pair can't drift apart.
+static func _decode(board: String, value: float) -> float:
+	if not _is_time_board(board):
+		return value
+	return maxf(0.0, TIME_SCORE_BASE - value)
 
 
 # ------------------------------------------------------------ public api ----
 
+## `score` is always the real-world value — seconds for a level board, a level
+## number for the general one. Inversion for storage happens in _run().
 func submit_score(player_name: String, score: float, board: String) -> void:
 	if player_name.is_empty():
 		push_warning("LeaderboardApi: refusing to submit an unnamed score")
@@ -136,15 +180,16 @@ func _run(request: Dictionary) -> void:
 	var board: String = request["board"]
 	match request["kind"]:
 		"save":
-			SilentWolf.Scores.save_score(request["player"], request["score"], board)
-			var result: Variant = await SilentWolf.Scores.sw_save_score_complete
+			SilentWolf.Scores.save_score(request["player"], _encode(board, request["score"]), board)
+			var result: Variant = await _await_or_timeout(SilentWolf.Scores.sw_save_score_complete)
 			if result:
+				# Reports the real value, not what went over the wire.
 				SignalBus.score_submitted.emit(board, request["player"], request["score"])
 			else:
 				SignalBus.score_submit_failed.emit(board, "save_score returned no result")
 		"get":
 			SilentWolf.Scores.get_scores(request["maximum"], board)
-			var result: Variant = await SilentWolf.Scores.sw_get_scores_complete
+			var result: Variant = await _await_or_timeout(SilentWolf.Scores.sw_get_scores_complete)
 			if not result is Dictionary:
 				SignalBus.scores_request_failed.emit(board, "get_scores returned no result")
 				return
@@ -154,7 +199,36 @@ func _run(request: Dictionary) -> void:
 				# Shouldn't happen while requests are serialised, but reporting the
 				# board it actually belongs to beats mislabelling someone's scores.
 				push_warning("LeaderboardApi: asked for '%s', got '%s'" % [board, returned_board])
-			SignalBus.scores_received.emit(returned_board, _normalise_scores(payload.get("scores", [])))
+			SignalBus.scores_received.emit(
+				returned_board, _normalise_scores(payload.get("scores", []), returned_board)
+			)
+
+
+## Awaits `sig`, giving up after REQUEST_TIMEOUT and returning null.
+##
+## Needed because SilentWolf simply doesn't emit on a failed response — see
+## REQUEST_TIMEOUT. Returning null makes the caller report a failure and, more
+## importantly, lets _pump() release `_busy` so later requests still work.
+func _await_or_timeout(sig: Signal) -> Variant:
+	var state: Dictionary = {"done": false, "value": null}
+	# Defaulted parameter so this fits the signal whether it carries a payload or
+	# not — SilentWolf declares these with no parameters but emits one argument.
+	var on_complete: Callable = func(value: Variant = null) -> void:
+		state["value"] = value
+		state["done"] = true
+	sig.connect(on_complete, CONNECT_ONE_SHOT)
+
+	var elapsed: float = 0.0
+	while not state["done"] and elapsed < REQUEST_TIMEOUT:
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+
+	if not state["done"]:
+		if sig.is_connected(on_complete):
+			sig.disconnect(on_complete)
+		push_warning("LeaderboardApi: request timed out after %.0fs" % REQUEST_TIMEOUT)
+		return null
+	return state["value"]
 
 
 func _fail(request: Dictionary, reason: String) -> void:
@@ -166,8 +240,9 @@ func _fail(request: Dictionary, reason: String) -> void:
 
 
 ## Flattens whatever SilentWolf hands back into a plain array of
-## {player_name, score} dictionaries, so no screen has to know the payload shape.
-func _normalise_scores(raw: Variant) -> Array:
+## {player_name, score} dictionaries, so no screen has to know the payload shape —
+## and un-inverts times on the way, so `score` is always a real-world value.
+func _normalise_scores(raw: Variant, board: String) -> Array:
 	var out: Array = []
 	if not raw is Array:
 		return out
@@ -176,7 +251,7 @@ func _normalise_scores(raw: Variant) -> Array:
 			continue
 		out.append({
 			"player_name": str(entry.get("player_name", entry.get("name", "?"))),
-			"score": float(entry.get("score", 0.0)),
+			"score": _decode(board, float(entry.get("score", 0.0))),
 		})
 	return out
 

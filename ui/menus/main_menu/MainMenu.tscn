@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://ui/menus/main_menu/MainMenu.gd" id="1_mainmenu"]
 [ext_resource type="PackedScene" path="res://ui/menus/settings/SettingsMenu.tscn" id="2_settings"]
+[ext_resource type="PackedScene" path="res://ui/common/MenuBackground.tscn" id="3_bg"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -11,6 +12,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_mainmenu")
+
+[node name="Background" parent="." instance=ExtResource("3_bg")]
 
 [node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1

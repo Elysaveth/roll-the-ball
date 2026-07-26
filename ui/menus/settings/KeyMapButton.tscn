@@ -2,5 +2,15 @@
 
 [ext_resource type="Script" uid="uid://8hsklf67opwm" path="res://ui/menus/settings/KeyMapButton.gd" id="1_rlfwt"]
 
-[node name="KeyMapButton" type="Button"]
+[node name="KeyMapRow" type="HBoxContainer"]
+theme_override_constants/separation = 16
 script = ExtResource("1_rlfwt")
+
+[node name="ActionLabel" type="Label" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="KeyMapButton" type="Button" parent="."]
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2

@@ -45,3 +45,15 @@ SETTINGS_TITLE,Settings,Ajustes
 SETTINGS_LANGUAGE_EN,English,English
 SETTINGS_LANGUAGE_ES,Spanish,Español
 SETTINGS_FPS_UNCAPPED,Uncapped,Sin límite
+CONTROLS_UNBOUND,Unbound,Sin asignar
+CONTROLS_MOUSE_BUTTON,Mouse button %d,Botón de ratón %d
+CONTROLS_RESET,Restore defaults,Restaurar por defecto
+CONTROLS_NONE,No rebindable actions found.,No hay acciones reasignables.
+ACTION_TOGGLE_PLAY,Play / edit,Jugar / editar
+ACTION_TOGGLE_PAUSE,Pause / cancel,Pausa / cancelar
+ACTION_ROTATE_PROP,Rotate prop,Rotar objeto
+ACTION_SCALE_PROP,Resize prop,Redimensionar objeto
+ACTION_CAMERA_UP,Pan camera up,Mover cámara arriba
+ACTION_CAMERA_DOWN,Pan camera down,Mover cámara abajo
+ACTION_CAMERA_LEFT,Pan camera left,Mover cámara izquierda
+ACTION_CAMERA_RIGHT,Pan camera right,Mover cámara derecha
