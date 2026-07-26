@@ -90,6 +90,8 @@ func _run() -> void:
 	await _phase("debug availability", _test_debug_availability)
 	await _phase("bouncers", _test_bouncers)
 	await _phase("score publishing", _test_score_publishing)
+	await _phase("background music", _test_music)
+	await _phase("export ships credentials", _test_export_includes_secrets)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -1807,6 +1809,81 @@ func _test_score_publishing() -> void:
 	SaveManager.switch_player(TEST_PLAYER)
 	SaveManager.mark_tutorial_seen()
 	SaveManager.mark_outro_seen()
+
+
+## The music has to survive scene changes and route through the Music bus, or the
+## volume slider does nothing and the track restarts every time a menu opens.
+func _test_music() -> void:
+	print("\n[background music]")
+	check(MusicPlayer != null, "the music autoload exists")
+	check(ResourceLoader.exists(MusicPlayer.TRACK_PATH), "the track file is there")
+
+	var stream_player: AudioStreamPlayer = MusicPlayer.get_node_or_null("Stream")
+	check(stream_player != null, "it owns an AudioStreamPlayer")
+	if stream_player == null:
+		return
+
+	check(stream_player.stream != null, "with the track loaded")
+	check(
+		stream_player.bus == Settings.BUS_MUSIC,
+		"playing on the Music bus so the volume slider reaches it (bus '%s')" % stream_player.bus
+	)
+	# A background track that stops after one play is a confusing bug to chase, and the
+	# .import flag can be reset by a re-import.
+	if stream_player.stream is AudioStreamMP3:
+		check(stream_player.stream.loop, "and set to loop")
+	check(MusicPlayer.is_playing(), "it starts on its own")
+
+	# Being an autoload is what keeps it going across scene changes; confirm it really
+	# is parented outside any scene.
+	check(
+		MusicPlayer.get_parent() == get_tree().root,
+		"it lives on the root, so changing scene can't stop it"
+	)
+
+	var volume_bus: int = AudioServer.get_bus_index(Settings.BUS_MUSIC)
+	var restore: float = Settings.music_volume
+	Settings.set_music_volume(0.25)
+	check(
+		absf(AudioServer.get_bus_volume_db(volume_bus) - linear_to_db(0.25)) < 0.01,
+		"the music volume setting moves that bus"
+	)
+	Settings.set_music_volume(restore)
+
+
+## secrets.cfg must be in every export preset's include filter.
+##
+## Godot's "all_resources" export filter ships RESOURCES, and a plain .cfg is not one —
+## so the credentials were silently missing from every exported build while working
+## perfectly in the editor. The only symptom was "Leaderboards are not configured" in
+## the shipped game, which is a miserable thing to debug from a player report.
+func _test_export_includes_secrets() -> void:
+	print("\n[export ships credentials]")
+	var presets: ConfigFile = ConfigFile.new()
+	var loaded: int = presets.load("res://export_presets.cfg")
+	if loaded != OK:
+		# A fresh clone has no presets until someone opens the export dialog; that is
+		# not a failure, just nothing to check.
+		check(true, "no export presets to check (%s)" % error_string(loaded))
+		return
+
+	var checked: int = 0
+	for section in presets.get_sections():
+		if not section.begins_with("preset."):
+			continue
+		if section.contains("."):
+			# preset.N holds the config; preset.N.options holds platform settings.
+			var parts: PackedStringArray = section.split(".")
+			if parts.size() > 2:
+				continue
+		var preset_name: String = str(presets.get_value(section, "name", section))
+		var filter: String = str(presets.get_value(section, "include_filter", ""))
+		checked += 1
+		check(
+			filter.contains("secrets.cfg"),
+			"'%s' ships secrets.cfg (include_filter='%s')" % [preset_name, filter]
+		)
+	check(checked > 0, "at least one export preset was checked (%d)" % checked)
 
 
 # ---------------------------------------------------------------- helpers ----
