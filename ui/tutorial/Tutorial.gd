@@ -36,6 +36,11 @@ const STEPS: Array = [
 		"text": "TUTORIAL_BASKET",
 		"reveal": ["Geometry/Floor", "Geometry/BasketFloor",
 			"Geometry/BasketWallLeft", "Geometry/BasketWallRight", "Goal"],
+		# The basket sits directly behind the balloon, so Joe hops up out of the way
+		# rather than pointing at something the player can't see. The lift persists
+		# through the remaining steps — there is nothing to be gained by dropping back
+		# down over it again.
+		"lift": 300.0,
 	},
 	{"text": "TUTORIAL_TIME", "show_clock": true},
 	{"text": "TUTORIAL_PROPS", "show_palette": true},
@@ -45,6 +50,8 @@ const STEPS: Array = [
 const FADE_IN: float = 0.5
 const JOE_FADE_OUT: float = 1.0
 const BALLOON_POP: float = 0.22
+## Short and slightly springy, so moving aside reads as a hop rather than a slide.
+const LIFT_TIME: float = 0.35
 
 signal tutorial_finished
 
@@ -59,9 +66,19 @@ var _running: bool = false
 ## True while a transition is playing, so a fast clicker can't skip a reveal.
 var _busy: bool = false
 
+## How far Joe and the balloon are currently raised, and the offsets they sit at when
+## not raised at all. Authored offsets are read rather than positions, because they are
+## correct the moment the scene loads — positions aren't resolved until the first layout
+## pass, which hasn't happened when the tutorial starts.
+var _lift: float = 0.0
+var _joe_rest: Vector2 = Vector2.ZERO
+var _balloon_rest: Vector2 = Vector2.ZERO
+
 
 func _ready() -> void:
 	hide()
+	_joe_rest = Vector2(joe.offset_top, joe.offset_bottom)
+	_balloon_rest = Vector2(balloon.offset_top, balloon.offset_bottom)
 	SignalBus.level_started.connect(_on_level_started)
 
 
@@ -95,6 +112,7 @@ func _begin() -> void:
 	balloon.modulate.a = 0.0
 	balloon.scale = Vector2.ONE
 	balloon.pivot_offset = balloon.size * 0.5
+	set_lift(0.0, false)
 	_advance()
 
 	var tween: Tween = create_tween()
@@ -145,6 +163,36 @@ func _advance() -> void:
 			hud.set_clock_visible(true)
 		if bool(step.get("show_palette", false)):
 			hud.set_palette_visible(true)
+
+	# Steps that don't mention a lift keep whatever the last one set.
+	var wanted_lift: float = float(step.get("lift", _lift))
+	if not is_equal_approx(wanted_lift, _lift):
+		set_lift(wanted_lift, true)
+
+
+## Raises Joe and the balloon by `pixels` so they stop covering whatever was just
+## revealed. Both are anchored to the bottom edge, so the offsets move together.
+func set_lift(pixels: float, animate: bool) -> void:
+	_lift = pixels
+	if not animate:
+		joe.offset_top = _joe_rest.x - pixels
+		joe.offset_bottom = _joe_rest.y - pixels
+		balloon.offset_top = _balloon_rest.x - pixels
+		balloon.offset_bottom = _balloon_rest.y - pixels
+		return
+
+	var hop: Tween = create_tween()
+	hop.set_parallel(true)
+	hop.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	hop.tween_property(joe, "offset_top", _joe_rest.x - pixels, LIFT_TIME)
+	hop.tween_property(joe, "offset_bottom", _joe_rest.y - pixels, LIFT_TIME)
+	hop.tween_property(balloon, "offset_top", _balloon_rest.x - pixels, LIFT_TIME)
+	hop.tween_property(balloon, "offset_bottom", _balloon_rest.y - pixels, LIFT_TIME)
+
+
+## How far the pair are currently raised. Exposed for the test suite.
+func get_lift() -> float:
+	return _lift
 
 
 ## Joe leaves first and the balloon stays until he's gone, then pops.

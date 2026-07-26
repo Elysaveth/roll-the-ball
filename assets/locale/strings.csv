@@ -28,7 +28,7 @@ RESULT_TIME,Time: %s,Tiempo: %s
 RESULT_REFUND,You won back %s.,Has recuperado %s.
 RESULT_SPENT,You spent %s.,Has gastado %s.
 RESULT_NO_IMPROVEMENT,No improvement: remaining time unchanged.,No has mejorado: tiempo restante sin cambios.
-RESULT_BANK_LEFT,Tiempo remaining: %s,Tiempo restante: %s
+RESULT_BANK_LEFT,Time remaining: %s,Tiempo restante: %s
 RESULT_TIME_UP_DETAIL,TIME'S UP! You need to do better...,TIEMPO! Tendrás que hacerlo mejor...
 PROP_ROTATE,Rotate,Rotar
 PROP_RESIZE,Resize,Redimensionar
