@@ -30,7 +30,7 @@ size = Vector2(260, 110)
 [node name="Level02" type="Node2D" unique_id=683948185]
 position = Vector2(0, 2)
 script = ExtResource("1_g12vx")
-available_props = Array[PackedScene]([ExtResource("2_u2w5y"), ExtResource("3_ufdke"), ExtResource("4_yncwd"), ExtResource("5_ulugv")])
+available_props = Array[PackedScene]([])
 ball_scene = ExtResource("6_0at4l")
 display_name = "Primer rodaje"
 
