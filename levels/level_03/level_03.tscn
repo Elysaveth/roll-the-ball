@@ -1,11 +1,11 @@
 [gd_scene format=3 uid="uid://er4dy8wxkc3q"]
 
 [ext_resource type="Script" uid="uid://cwpm71oi6dntd" path="res://levels/Level.gd" id="1_i3dki"]
-[ext_resource type="PackedScene" path="res://entities/props/hielo/hielo.tscn" id="2_4krl6"]
-[ext_resource type="PackedScene" path="res://entities/props/moai/moai.tscn" id="3_mjgir"]
-[ext_resource type="PackedScene" path="res://entities/props/pinball/pinball.tscn" id="4_3k080"]
-[ext_resource type="PackedScene" path="res://entities/props/bomb/bomb.tscn" id="5_xs6mv"]
-[ext_resource type="PackedScene" uid="uid://dkjyhefqbosj7" path="res://entities/props/ball/ball.tscn" id="6_rfe46"]
+[ext_resource type="PackedScene" uid="uid://unbcj1qx7p2p" path="res://entities/props/hielo/hielo.tscn" id="2_4krl6"]
+[ext_resource type="PackedScene" uid="uid://beaesrino3umx" path="res://entities/props/moai/moai.tscn" id="3_mjgir"]
+[ext_resource type="PackedScene" uid="uid://dskgo0flewh42" path="res://entities/props/pinball/pinball.tscn" id="4_3k080"]
+[ext_resource type="PackedScene" uid="uid://dpn38ghijay6e" path="res://entities/props/bomb/bomb.tscn" id="5_xs6mv"]
+[ext_resource type="PackedScene" uid="uid://dkjyhefqbosj7" path="res://entities/ball/ball.tscn" id="6_rfe46"]
 [ext_resource type="Script" uid="uid://depun3jsxl11e" path="res://levels/Goal.gd" id="7_l6hoh"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_stone"]
@@ -45,6 +45,8 @@ color = Color(0.31, 0.35, 0.42, 1)
 polygon = PackedVector2Array(-150, -20, 150, -20, 150, 20, -150, 20)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Geometry/LeftLedge" unique_id=1558518979]
+position = Vector2(-189.27095, -33.429195)
+rotation = 0.6036439
 shape = SubResource("RectangleShape2D_ledge")
 
 [node name="Floor" type="StaticBody2D" parent="Geometry" unique_id=621797811]
@@ -92,7 +94,7 @@ polygon = PackedVector2Array(-10, -80, 10, -80, 10, 80, -10, 80)
 shape = SubResource("RectangleShape2D_basket_wall")
 
 [node name="BallSpawn" type="Marker2D" parent="." unique_id=969515238]
-position = Vector2(986, 174)
+position = Vector2(934, 104)
 
 [node name="Goal" type="Area2D" parent="." unique_id=1959783321]
 position = Vector2(237, 909)
