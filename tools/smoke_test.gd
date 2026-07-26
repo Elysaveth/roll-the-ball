@@ -67,6 +67,8 @@ func _run() -> void:
 	await _phase("leaderboard encoding", _test_leaderboard_encoding)
 	await _phase("remappable actions", _test_remappable_actions)
 	await _phase("theme and backgrounds", _test_theme_and_backgrounds)
+	await _phase("theme icon coverage", _test_theme_icon_coverage)
+	await _phase("settings menu layout", _test_settings_menu_layout)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -626,6 +628,80 @@ func _test_theme_and_backgrounds() -> void:
 	check(layer is CanvasLayer and layer.layer < 0, "it sits behind the world (layer %s)" % [
 		layer.layer if layer is CanvasLayer else "n/a"
 	])
+
+
+## Godot silently falls back to its BUILT-IN default theme for anything a custom
+## theme leaves undefined, and icon-driven controls are the easy ones to miss — a
+## slider handle or checkbox is a Texture2D, not a StyleBox, so styling the boxes
+## alone leaves stock Godot artwork sitting in the middle of the UI.
+func _test_theme_icon_coverage() -> void:
+	print("
+[theme icon coverage]")
+	var theme: Theme = load(str(ProjectSettings.get_setting("gui/theme/custom", "")))
+	if theme == null:
+		check(false, "the theme resource loads")
+		return
+
+	var expected: Dictionary = {
+		"HSlider": ["grabber", "grabber_highlight"],
+		"CheckButton": ["checked", "unchecked"],
+		"CheckBox": ["checked", "unchecked"],
+		"OptionButton": ["arrow"],
+	}
+	for type_name in expected:
+		for icon in expected[type_name]:
+			check(
+				theme.has_icon(icon, type_name),
+				"%s.%s is themed (else it renders as stock Godot)" % [type_name, icon]
+			)
+
+	check(theme.has_stylebox("slider", "HSlider"), "the slider track is themed")
+	check(theme.has_stylebox("grabber_area", "HSlider"), "the slider fill is themed")
+	check(theme.has_color("font_color", "CheckButton"), "checkbutton text uses the ink colour")
+
+
+## The tab box needs a fixed minimum, or each tab sizes to its own content and the
+## panel jumps around as you switch — which on a centred panel walks the tab strip
+## out from under the cursor.
+func _test_settings_menu_layout() -> void:
+	print("
+[settings menu layout]")
+	var scene: PackedScene = load("res://ui/menus/settings/SettingsMenu.tscn")
+	var menu: Control = scene.instantiate()
+	get_tree().root.add_child(menu)
+	await get_tree().process_frame
+
+	var panel: Control = menu.get_node_or_null("Center/Panel")
+	check(panel != null, "the panel is centred rather than pinned top-left")
+	if panel != null:
+		check(
+			panel.custom_minimum_size.x > 0.0 and panel.custom_minimum_size.y > 0.0,
+			"the panel has a minimum size (%s)" % panel.custom_minimum_size
+		)
+
+	var tabs: TabContainer = menu.get_node_or_null("%Tabs")
+	check(tabs != null, "the tab container resolves by unique name")
+	if tabs != null:
+		check(tabs.custom_minimum_size.y > 0.0, "the tab box has a minimum height (%.0f)" % tabs.custom_minimum_size.y)
+		check(tabs.get_tab_count() == 5, "all five tabs are present (%d)" % tabs.get_tab_count())
+		# Titles come from translations, not node names.
+		check(tabs.get_tab_title(0) == tr("SETTINGS_TAB_AUDIO"), "tab titles are translated ('%s')" % tabs.get_tab_title(0))
+
+	# Every control the script drives must resolve, or the menu half-works.
+	for unique in ["%MasterSlider", "%FPSLimit", "%Language", "%ControlsList", "%Back"]:
+		check(menu.get_node_or_null(unique) != null, "%s resolves" % unique)
+
+	var rows: Node = menu.get_node_or_null("%ControlsList")
+	if rows != null:
+		# One row per action, plus the reset button.
+		var expected_rows: int = Settings.get_remappable_actions().size() + 1
+		check(
+			rows.get_child_count() == expected_rows,
+			"the Controls tab built %d rows for %d actions" % [rows.get_child_count(), expected_rows - 1]
+		)
+
+	menu.get_parent().remove_child(menu)
+	menu.queue_free()
 
 
 # ---------------------------------------------------------------- helpers ----

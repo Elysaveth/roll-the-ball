@@ -96,18 +96,22 @@ func is_configured() -> bool:
 	return not offline and not api_key.is_empty() and not game_id.is_empty()
 
 
-static func board_for_level(level_id: int) -> String:
+## These are instance methods rather than static because they're only ever reached
+## through the LeaderboardApi autoload, and calling a static function on an
+## instance is a warning. An autoload can't declare a matching `class_name` to be
+## addressed as a class either, so instance methods are the right shape.
+func board_for_level(level_id: int) -> String:
 	return BOARD_LEVEL_TEMPLATE % level_id
 
 
 ## True for boards whose scores are times and therefore stored inverted.
-static func _is_time_board(board: String) -> bool:
+func _is_time_board(board: String) -> bool:
 	return board != BOARD_GENERAL
 
 
 ## Real seconds -> the number actually stored. Clamped at zero so a freak time
 ## beyond the base can't wrap into a leading score.
-static func _encode(board: String, value: float) -> float:
+func _encode(board: String, value: float) -> float:
 	if not _is_time_board(board):
 		return value
 	return maxf(0.0, TIME_SCORE_BASE - value)
@@ -115,7 +119,7 @@ static func _encode(board: String, value: float) -> float:
 
 ## The stored number -> real seconds. Deliberately the same arithmetic as
 ## _encode, so the pair can't drift apart.
-static func _decode(board: String, value: float) -> float:
+func _decode(board: String, value: float) -> float:
 	if not _is_time_board(board):
 		return value
 	return maxf(0.0, TIME_SCORE_BASE - value)
@@ -134,6 +138,21 @@ func submit_score(player_name: String, score: float, board: String) -> void:
 
 func fetch_scores(board: String, maximum: int = DEFAULT_MAX_SCORES) -> void:
 	_enqueue({"kind": "get", "board": board, "maximum": maximum})
+
+
+## Removes a single entry. `score_id` comes from the `score_id` field of a fetched
+## score — see tools/leaderboard_admin.gd, which pairs a fetch with this.
+func delete_score(score_id: String, board: String) -> void:
+	if score_id.is_empty():
+		push_warning("LeaderboardApi: delete_score needs a score_id")
+		return
+	_enqueue({"kind": "delete", "board": board, "score_id": score_id})
+
+
+## Empties a whole board. Destructive and irreversible — there is no undo on the
+## SilentWolf side, so nothing in the game calls this; it exists for the admin tool.
+func wipe_board(board: String) -> void:
+	_enqueue({"kind": "wipe", "board": board})
 
 
 # ------------------------------------------------------- auto submission ----
@@ -202,6 +221,20 @@ func _run(request: Dictionary) -> void:
 			SignalBus.scores_received.emit(
 				returned_board, _normalise_scores(payload.get("scores", []), returned_board)
 			)
+		"delete":
+			SilentWolf.Scores.delete_score(request["score_id"], board)
+			var result: Variant = await _await_or_timeout(SilentWolf.Scores.sw_delete_score_complete)
+			if result:
+				SignalBus.score_deleted.emit(board, request["score_id"])
+			else:
+				SignalBus.score_submit_failed.emit(board, "delete_score returned no result")
+		"wipe":
+			SilentWolf.Scores.wipe_leaderboard(board)
+			var result: Variant = await _await_or_timeout(SilentWolf.Scores.sw_wipe_leaderboard_complete)
+			if result:
+				SignalBus.board_wiped.emit(board)
+			else:
+				SignalBus.score_submit_failed.emit(board, "wipe_leaderboard returned no result")
 
 
 ## Awaits `sig`, giving up after REQUEST_TIMEOUT and returning null.
@@ -252,6 +285,8 @@ func _normalise_scores(raw: Variant, board: String) -> Array:
 		out.append({
 			"player_name": str(entry.get("player_name", entry.get("name", "?"))),
 			"score": _decode(board, float(entry.get("score", 0.0))),
+			# Carried through so an entry can be deleted later; the UI ignores it.
+			"score_id": str(entry.get("score_id", "")),
 		})
 	return out
 

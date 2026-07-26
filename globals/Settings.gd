@@ -85,13 +85,18 @@ func get_locale() -> String:
 ## Every action the project defines, in declaration order, excluding Godot's
 ## built-in ui_* set. Read from ProjectSettings rather than hardcoded so the
 ## Controls tab grows by itself whenever someone adds an action.
-static func get_remappable_actions() -> Array[String]:
+##
+## Not static: this is only ever reached through the Settings autoload, which is an
+## instance, and calling a static function on an instance is a warning. An autoload
+## can't declare a matching `class_name` to be called properly as a class either,
+## so an instance method is the right shape here.
+func get_remappable_actions() -> Array[String]:
 	var actions: Array[String] = []
 	for property in ProjectSettings.get_property_list():
-		var name: String = str(property.get("name", ""))
-		if not name.begins_with("input/"):
+		var action_name: String = str(property.get("name", ""))
+		if not action_name.begins_with("input/"):
 			continue
-		var action: String = name.trim_prefix("input/")
+		var action: String = action_name.trim_prefix("input/")
 		if action.begins_with("ui_") or action.is_empty():
 			continue
 		actions.append(action)
@@ -100,9 +105,9 @@ static func get_remappable_actions() -> Array[String]:
 		# Fallback for any build where the input/* settings aren't enumerable.
 		# InputMap is always populated, it just doesn't preserve declaration order.
 		for action in InputMap.get_actions():
-			var name: String = str(action)
-			if not name.begins_with("ui_"):
-				actions.append(name)
+			var action_name: String = str(action)
+			if not action_name.begins_with("ui_"):
+				actions.append(action_name)
 		actions.sort()
 	return actions
 
@@ -168,14 +173,14 @@ func _event_from_dict(data: Dictionary) -> InputEvent:
 	match str(data.get("type", "")):
 		"key":
 			var key: InputEventKey = InputEventKey.new()
-			key.physical_keycode = int(data.get("physical_keycode", 0))
-			key.keycode = int(data.get("keycode", 0))
+			key.physical_keycode = int(data.get("physical_keycode", 0)) as Key
+			key.keycode = int(data.get("keycode", 0)) as Key
 			if key.physical_keycode == 0 and key.keycode == 0:
 				return null
 			return key
 		"mouse":
 			var button: InputEventMouseButton = InputEventMouseButton.new()
-			button.button_index = int(data.get("button_index", 0))
+			button.button_index = int(data.get("button_index", 0)) as MouseButton
 			if button.button_index == 0:
 				return null
 			return button

@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://d04mk2hleja0p"]
+[gd_scene load_steps=3 format=3 uid="uid://d04mk2hleja0p"]
 
 [ext_resource type="Script" uid="uid://b1ckufhivjl7d" path="res://ui/menus/settings/SettingsMenu.gd" id="1_bxblg"]
+[ext_resource type="PackedScene" path="res://ui/common/MenuBackground.tscn" id="2_bg"]
 
 [node name="SettingsMenu" type="Control"]
 layout_mode = 3
@@ -11,97 +12,229 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_bxblg")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="Background" parent="." instance=ExtResource("2_bg")]
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(980, 740)
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer"]
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
 layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
 
-[node name="Title" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Center/Panel/Margin"]
 layout_mode = 2
+theme_override_constants/separation = 20
 
-[node name="Tabs" type="TabContainer" parent="PanelContainer/MarginContainer/VBoxContainer"]
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
-current_tab = 5
+theme_override_font_sizes/font_size = 40
+text = "SETTINGS_TITLE"
+horizontal_alignment = 1
 
-[node name="Audio" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs"]
-visible = false
+[node name="Tabs" type="TabContainer" parent="Center/Panel/Margin/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 540)
 layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="Audio" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 18
 metadata/_tab_index = 0
 
-[node name="MasterSlider" type="HSlider" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Audio"]
+[node name="MasterRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Audio"]
 layout_mode = 2
+theme_override_constants/separation = 16
 
-[node name="MusicSlider" type="HSlider" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Audio"]
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Audio/MasterRow"]
+custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
+size_flags_vertical = 4
+text = "SETTINGS_MASTER_VOLUME"
 
-[node name="SFXSlider" type="HSlider" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Audio"]
+[node name="MasterSlider" type="HSlider" parent="Center/Panel/Margin/VBoxContainer/Tabs/Audio/MasterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 34)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 
-[node name="Display" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs"]
+[node name="MusicRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Audio"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Audio/MusicRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SETTINGS_MUSIC_VOLUME"
+
+[node name="MusicSlider" type="HSlider" parent="Center/Panel/Margin/VBoxContainer/Tabs/Audio/MusicRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="SFXRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Audio"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Audio/SFXRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SETTINGS_SFX_VOLUME"
+
+[node name="SFXSlider" type="HSlider" parent="Center/Panel/Margin/VBoxContainer/Tabs/Audio/SFXRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="Display" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
 visible = false
 layout_mode = 2
+theme_override_constants/separation = 18
 metadata/_tab_index = 1
 
-[node name="FPSLimit" type="OptionButton" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Display"]
+[node name="FPSRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Display"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Display/FPSRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SETTINGS_FPS_LIMIT"
+
+[node name="FPSLimit" type="OptionButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Display/FPSRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 
-[node name="VSync" type="CheckButton" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Display"]
+[node name="VSyncRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Display"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Display/VSyncRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SETTINGS_VSYNC"
+
+[node name="VSync" type="CheckButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Display/VSyncRow"]
+unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Visuals" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs"]
+[node name="Visuals" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
 visible = false
 layout_mode = 2
+theme_override_constants/separation = 18
 metadata/_tab_index = 2
 
-[node name="ParticlesToggle" type="CheckButton" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Visuals"]
+[node name="ParticlesToggle" type="CheckButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Visuals"]
+unique_name_in_owner = true
 layout_mode = 2
+text = "SETTINGS_PARTICLES"
 
-[node name="ScreenShakeToggle" type="CheckButton" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Visuals"]
+[node name="ScreenShakeToggle" type="CheckButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Visuals"]
+unique_name_in_owner = true
 layout_mode = 2
+text = "SETTINGS_SCREEN_SHAKE"
 
-[node name="MotionBlurToggle" type="CheckButton" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Visuals"]
+[node name="MotionBlurToggle" type="CheckButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Visuals"]
+unique_name_in_owner = true
 layout_mode = 2
+text = "SETTINGS_MOTION_BLUR"
 
-[node name="Accessibility" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs"]
+[node name="Accessibility" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
 visible = false
 layout_mode = 2
+theme_override_constants/separation = 18
 metadata/_tab_index = 3
 
-[node name="Language" type="OptionButton" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Accessibility"]
+[node name="LanguageRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility/LanguageRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SETTINGS_LANGUAGE"
+
+[node name="Language" type="OptionButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility/LanguageRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 
-[node name="TextSize" type="HSlider" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Accessibility"]
+[node name="TextSizeRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility/TextSizeRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SETTINGS_TEXT_SIZE"
+
+[node name="TextSize" type="HSlider" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility/TextSizeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="ColorblindRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility/ColorblindRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SETTINGS_COLORBLIND"
+
+[node name="ColorblindMode" type="OptionButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility/ColorblindRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 
-[node name="ColorblindMode" type="OptionButton" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Accessibility"]
+[node name="ClosedCaptions" type="CheckButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility"]
+unique_name_in_owner = true
 layout_mode = 2
+text = "SETTINGS_CLOSED_CAPTIONS"
 
-[node name="ClosedCaptions" type="CheckButton" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs"]
+[node name="Controls" type="ScrollContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
 visible = false
 layout_mode = 2
+horizontal_scroll_mode = 0
 metadata/_tab_index = 4
 
-[node name="Controls" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs"]
+[node name="ControlsList" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Controls"]
+unique_name_in_owner = true
 layout_mode = 2
-metadata/_tab_index = 5
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
 
-[node name="CameraUpKey" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Controls"]
+[node name="Back" type="Button" parent="Center/Panel/Margin/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-
-[node name="CameraDownKey" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Controls"]
-layout_mode = 2
-
-[node name="CameraLeftKey" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Controls"]
-layout_mode = 2
-
-[node name="CameraRightKey" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/Tabs/Controls"]
-layout_mode = 2
-
-[node name="Back" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
+text = "LB_CLOSE"

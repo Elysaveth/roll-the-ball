@@ -277,7 +277,7 @@ func _on_goal_reached(level_id: int, attempt_time: float, bank_delta: float) -> 
 	# else on this level.
 	leaderboard.show()
 	leaderboard.show_board(
-		LeaderboardApi.board_for_level(level_id),
+ 		LeaderboardApi.board_for_level(level_id),
 		tr("LB_LEVEL_TITLE") % level_id,
 		LeaderboardApi.ValueFormat.SECONDS
 	)

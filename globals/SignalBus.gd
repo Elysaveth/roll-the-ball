@@ -86,6 +86,11 @@ signal score_submit_failed(board: String, error: String)
 signal scores_received(board: String, scores: Array)
 @warning_ignore("unused_signal")
 signal scores_request_failed(board: String, error: String)
+## Admin operations, used by tools/leaderboard_admin.gd rather than by the game.
+@warning_ignore("unused_signal")
+signal score_deleted(board: String, score_id: String)
+@warning_ignore("unused_signal")
+signal board_wiped(board: String)
 
 # -- Keybinding remap (see ui/menus/settings/KeyMapButton.gd) --
 @warning_ignore("unused_signal")

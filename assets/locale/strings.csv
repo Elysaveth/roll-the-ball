@@ -57,3 +57,20 @@ ACTION_CAMERA_UP,Pan camera up,Mover cámara arriba
 ACTION_CAMERA_DOWN,Pan camera down,Mover cámara abajo
 ACTION_CAMERA_LEFT,Pan camera left,Mover cámara izquierda
 ACTION_CAMERA_RIGHT,Pan camera right,Mover cámara derecha
+SETTINGS_TAB_AUDIO,Audio,Sonido
+SETTINGS_TAB_DISPLAY,Display,Pantalla
+SETTINGS_TAB_VISUALS,Visuals,Efectos
+SETTINGS_TAB_ACCESSIBILITY,Accessibility,Accesibilidad
+SETTINGS_TAB_CONTROLS,Controls,Controles
+SETTINGS_MASTER_VOLUME,Master volume,Volumen general
+SETTINGS_MUSIC_VOLUME,Music volume,Volumen de música
+SETTINGS_SFX_VOLUME,Effects volume,Volumen de efectos
+SETTINGS_FPS_LIMIT,Frame rate limit,Límite de fotogramas
+SETTINGS_VSYNC,Vertical sync,Sincronía vertical
+SETTINGS_PARTICLES,Particles,Partículas
+SETTINGS_SCREEN_SHAKE,Screen shake,Vibración de pantalla
+SETTINGS_MOTION_BLUR,Motion blur,Desenfoque de movimiento
+SETTINGS_LANGUAGE,Language,Idioma
+SETTINGS_TEXT_SIZE,Text size,Tamaño del texto
+SETTINGS_COLORBLIND,Colourblind mode,Modo daltónico
+SETTINGS_CLOSED_CAPTIONS,Closed captions,Subtítulos

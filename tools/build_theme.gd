@@ -29,6 +29,16 @@ extends SceneTree
 const TEXTURE_PATH: String = "res://assets/themes/jagged_panel.png"
 const THEME_PATH: String = "res://assets/themes/main_theme.tres"
 
+## Icons Godot expects as Texture2D rather than StyleBox. Anything left undefined
+## silently falls back to Godot's built-in default theme, which is how the sliders
+## and checkboxes ended up looking nothing like the rest of the UI.
+const GRABBER_PATH: String = "res://assets/themes/grabber.png"
+const CHECK_ON_PATH: String = "res://assets/themes/check_on.png"
+const CHECK_OFF_PATH: String = "res://assets/themes/check_off.png"
+const TOGGLE_ON_PATH: String = "res://assets/themes/toggle_on.png"
+const TOGGLE_OFF_PATH: String = "res://assets/themes/toggle_off.png"
+const ARROW_PATH: String = "res://assets/themes/arrow_down.png"
+
 # -- Palette ------------------------------------------------------------------
 const PAPER_LIGHT := Color("f4eee2") # brightest paper — panels, button faces
 const PAPER := Color("e8dbc9")       # menu paper centre
@@ -56,11 +66,19 @@ const RIM_TONE := Color(0.30, 0.28, 0.26, 1.0)
 
 
 func _initialize() -> void:
-	if not ResourceLoader.exists(TEXTURE_PATH):
+	var missing: Array[String] = []
+	for path in [TEXTURE_PATH, GRABBER_PATH, CHECK_ON_PATH, CHECK_OFF_PATH,
+			TOGGLE_ON_PATH, TOGGLE_OFF_PATH, ARROW_PATH]:
+		if not ResourceLoader.exists(path):
+			missing.append(path)
+
+	if not missing.is_empty():
 		_write_texture()
-		print("\nWrote %s — now run --import, then this script again." % TEXTURE_PATH)
+		_write_icons()
+		print("\nWrote %d image(s) — now run --import, then this script again." % missing.size())
 		quit()
 		return
+
 	_write_theme()
 	quit()
 
@@ -86,6 +104,115 @@ func _write_texture() -> void:
 	var error: int = image.save_png(TEXTURE_PATH)
 	if error != OK:
 		push_error("build_theme: couldn't write %s (%s)" % [TEXTURE_PATH, error_string(error)])
+
+
+## The small fixed-size icons Godot wants as textures. Drawn in the ink tone
+## directly (not greyscale) — unlike the 9-patch these are never restyled per
+## state, so there's nothing to gain from tinting them at runtime.
+func _write_icons() -> void:
+	_save(_make_grabber(28), GRABBER_PATH)
+	_save(_make_check_box(30, false), CHECK_OFF_PATH)
+	_save(_make_check_box(30, true), CHECK_ON_PATH)
+	_save(_make_toggle(56, 28, false), TOGGLE_OFF_PATH)
+	_save(_make_toggle(56, 28, true), TOGGLE_ON_PATH)
+	_save(_make_arrow(24), ARROW_PATH)
+
+
+func _save(image: Image, path: String) -> void:
+	var error: int = image.save_png(path)
+	if error != OK:
+		push_error("build_theme: couldn't write %s (%s)" % [path, error_string(error)])
+
+
+func _blank(width: int, height: int) -> Image:
+	var image: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+	return image
+
+
+## Slider handle: an ink diamond, which reads at small sizes better than a circle
+## and echoes the angular edges of the panels.
+func _make_grabber(size: int) -> Image:
+	var image: Image = _blank(size, size)
+	var half: float = size * 0.5
+	for y in size:
+		for x in size:
+			var d: float = absf(x + 0.5 - half) / half + absf(y + 0.5 - half) / half
+			if d <= 0.72:
+				image.set_pixel(x, y, INK)
+			elif d <= 1.0:
+				image.set_pixel(x, y, ACCENT)
+	return image
+
+
+## Checkbox: a hand-drawn-looking square with a tick when checked.
+func _make_check_box(size: int, checked: bool) -> Image:
+	var image: Image = _blank(size, size)
+	var thickness: int = 3
+	for y in size:
+		for x in size:
+			var on_frame: bool = x < thickness or y < thickness \
+				or x >= size - thickness or y >= size - thickness
+			if on_frame:
+				image.set_pixel(x, y, INK)
+			else:
+				image.set_pixel(x, y, PAPER_LIGHT)
+
+	if checked:
+		# Two strokes forming a tick, drawn thick enough to survive downscaling.
+		_stroke(image, Vector2(size * 0.24, size * 0.52), Vector2(size * 0.44, size * 0.72), 3, ACCENT)
+		_stroke(image, Vector2(size * 0.44, size * 0.72), Vector2(size * 0.78, size * 0.26), 3, ACCENT)
+	return image
+
+
+## CheckButton's on/off switch: a pill with the knob at one end.
+func _make_toggle(width: int, height: int, on: bool) -> Image:
+	var image: Image = _blank(width, height)
+	var radius: float = height * 0.5
+	for y in height:
+		for x in width:
+			# Distance to the pill's spine, so the ends round off.
+			var cx: float = clampf(x + 0.5, radius, width - radius)
+			var d: float = Vector2(x + 0.5 - cx, y + 0.5 - radius).length()
+			if d > radius - 0.5:
+				continue
+			image.set_pixel(x, y, INK if d > radius - 3.0 else (PAPER_EDGE if on else PAPER_LIGHT))
+
+	var knob_x: float = width - radius if on else radius
+	for y in height:
+		for x in width:
+			var d: float = Vector2(x + 0.5 - knob_x, y + 0.5 - radius).length()
+			if d <= radius - 4.0:
+				image.set_pixel(x, y, ACCENT if on else INK_SOFT)
+	return image
+
+
+## OptionButton's dropdown arrow.
+func _make_arrow(size: int) -> Image:
+	var image: Image = _blank(size, size)
+	var rows: int = size / 2
+	for row in rows:
+		var span: int = rows - row
+		var centre: int = size / 2
+		for x in range(centre - span, centre + span):
+			if x >= 0 and x < size:
+				image.set_pixel(x, row + size / 4, INK)
+	return image
+
+
+## Thick line between two points, for the tick mark.
+func _stroke(image: Image, from: Vector2, to: Vector2, thickness: int, colour: Color) -> void:
+	var steps: int = int(from.distance_to(to)) * 2
+	for i in range(steps + 1):
+		var point: Vector2 = from.lerp(to, float(i) / float(maxi(steps, 1)))
+		for dy in range(-thickness, thickness + 1):
+			for dx in range(-thickness, thickness + 1):
+				if Vector2(dx, dy).length() > thickness:
+					continue
+				var px: int = int(point.x) + dx
+				var py: int = int(point.y) + dy
+				if px >= 0 and py >= 0 and px < image.get_width() and py < image.get_height():
+					image.set_pixel(px, py, colour)
 
 
 ## Triangle wave: 0 at the period boundaries, AMPLITUDE in the middle. Continuous
@@ -117,6 +244,8 @@ func _write_theme() -> void:
 	_style_tabs(theme, texture)
 	_style_slider(theme)
 	_style_scrollbars(theme)
+	_style_toggles(theme, texture)
+	_style_option_button_icons(theme)
 
 	var error: int = ResourceSaver.save(theme, THEME_PATH)
 	if error != OK:
@@ -210,10 +339,64 @@ func _style_tabs(theme: Theme, texture: Texture2D) -> void:
 
 
 func _style_slider(theme: Theme) -> void:
-	# Sliders are thin; torn edges at that scale read as noise, so these stay flat.
-	theme.set_stylebox("slider", "HSlider", _flat(Color(INK_SOFT, 0.3), 3))
-	theme.set_stylebox("grabber_area", "HSlider", _flat(ACCENT, 3))
-	theme.set_stylebox("grabber_area_highlight", "HSlider", _flat(ACCENT.lightened(0.15), 3))
+	var grabber: Texture2D = load(GRABBER_PATH)
+	for type_name in ["HSlider", "VSlider"]:
+		# Sliders are thin; torn edges at that scale read as noise, so the track
+		# and fill stay flat.
+		theme.set_stylebox("slider", type_name, _flat(Color(INK_SOFT, 0.30), 4))
+		theme.set_stylebox("grabber_area", type_name, _flat(ACCENT, 4))
+		theme.set_stylebox("grabber_area_highlight", type_name, _flat(ACCENT.lightened(0.15), 4))
+		# The handle is an ICON, not a stylebox — leaving it undefined is what made
+		# the sliders look like stock Godot next to everything else.
+		theme.set_icon("grabber", type_name, grabber)
+		theme.set_icon("grabber_highlight", type_name, grabber)
+		theme.set_icon("grabber_disabled", type_name, grabber)
+		theme.set_constant("center_grabber", type_name, 1)
+	# Without a minimum, a themed track collapses to a hairline.
+	theme.set_constant("grabber_offset", "HSlider", 0)
+
+
+## CheckButton and CheckBox are icon-driven too. Same story as the slider handle:
+## anything not defined here comes from Godot's built-in theme and looks foreign.
+func _style_toggles(theme: Theme, texture: Texture2D) -> void:
+	var toggle_on: Texture2D = load(TOGGLE_ON_PATH)
+	var toggle_off: Texture2D = load(TOGGLE_OFF_PATH)
+	var check_on: Texture2D = load(CHECK_ON_PATH)
+	var check_off: Texture2D = load(CHECK_OFF_PATH)
+
+	for type_name in ["CheckButton", "CheckBox"]:
+		var on: Texture2D = toggle_on if type_name == "CheckButton" else check_on
+		var off: Texture2D = toggle_off if type_name == "CheckButton" else check_off
+		theme.set_icon("checked", type_name, on)
+		theme.set_icon("unchecked", type_name, off)
+		theme.set_icon("checked_disabled", type_name, on)
+		theme.set_icon("unchecked_disabled", type_name, off)
+		# Radio variants share the artwork; nothing in the game uses them yet, but
+		# leaving them undefined would mix two visual languages in one row.
+		theme.set_icon("radio_checked", type_name, on)
+		theme.set_icon("radio_unchecked", type_name, off)
+		theme.set_icon("radio_checked_disabled", type_name, on)
+		theme.set_icon("radio_unchecked_disabled", type_name, off)
+
+		# Toggles sit on the panel rather than in their own card, so only the
+		# hover/pressed states get a box — a permanent frame around every checkbox
+		# row would be noise.
+		theme.set_stylebox("normal", type_name, _flat(Color(0, 0, 0, 0)))
+		theme.set_stylebox("hover", type_name, _box(texture, PAPER_EDGE, 8))
+		theme.set_stylebox("pressed", type_name, _box(texture, SEPIA, 8))
+		theme.set_stylebox("disabled", type_name, _flat(Color(0, 0, 0, 0)))
+		theme.set_stylebox("focus", type_name, _flat(Color(0, 0, 0, 0)))
+		theme.set_color("font_color", type_name, INK)
+		theme.set_color("font_hover_color", type_name, INK)
+		theme.set_color("font_pressed_color", type_name, INK)
+		theme.set_color("font_disabled_color", type_name, Color(INK_SOFT, 0.45))
+		theme.set_constant("h_separation", type_name, 12)
+
+
+func _style_option_button_icons(theme: Theme) -> void:
+	# The dropdown chevron is an icon; the stock one is a different grey entirely.
+	theme.set_icon("arrow", "OptionButton", load(ARROW_PATH))
+	theme.set_constant("arrow_margin", "OptionButton", 8)
 
 
 func _style_scrollbars(theme: Theme) -> void:

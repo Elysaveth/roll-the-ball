@@ -6,24 +6,36 @@ extends Control
 # The Controls tab is generated at runtime from whatever actions the project
 # defines, so adding an action to Project Settings is all it takes to get a
 # rebindable row for it — nobody has to touch this scene again.
+#
+# Nodes are reached by unique name (%Name) rather than by path, so rearranging the
+# scene's containers doesn't break the script.
+#
+# NOT YET WIRED, deliberately left as labelled placeholders for whoever picks them
+# up: music/SFX volumes (need their own audio buses), VSync, the three Visuals
+# toggles, text size and colourblind mode. Master volume, FPS limit, language and
+# the whole Controls tab are live.
 
 const KEY_MAP_ROW: PackedScene = preload("res://ui/menus/settings/KeyMapButton.tscn")
 
-@onready var master_slider: HSlider = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Audio/MasterSlider
-@onready var fps_option: OptionButton = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Display/FPSLimit
-@onready var language_option: OptionButton = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Accessibility/Language
-@onready var controls_tab: VBoxContainer = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Controls
-@onready var title_label: Label = $PanelContainer/MarginContainer/VBoxContainer/Title
-@onready var back_button: Button = $PanelContainer/MarginContainer/VBoxContainer/Back
+## Tab order must match the scene. Titles come from translations rather than node
+## names, which is what a TabContainer would otherwise display.
+const TAB_TITLE_KEYS: PackedStringArray = [
+	"SETTINGS_TAB_AUDIO",
+	"SETTINGS_TAB_DISPLAY",
+	"SETTINGS_TAB_VISUALS",
+	"SETTINGS_TAB_ACCESSIBILITY",
+	"SETTINGS_TAB_CONTROLS",
+]
+
+@onready var tabs: TabContainer = %Tabs
+@onready var master_slider: HSlider = %MasterSlider
+@onready var fps_option: OptionButton = %FPSLimit
+@onready var language_option: OptionButton = %Language
+@onready var controls_list: VBoxContainer = %ControlsList
+@onready var back_button: Button = %Back
 
 
 func _ready() -> void:
-	title_label.text = "SETTINGS_TITLE"
-	back_button.text = "LB_CLOSE"
-
-	_populate_options()
-	_build_controls_tab()
-
 	master_slider.min_value = 0.0
 	master_slider.max_value = 1.0
 	master_slider.step = 0.01
@@ -32,11 +44,19 @@ func _ready() -> void:
 	fps_option.item_selected.connect(Settings.set_fps_index)
 	language_option.item_selected.connect(Settings.set_locale_index)
 	back_button.pressed.connect(hide)
-	# Each language names itself in the dropdown, so the list has to be rebuilt
-	# whenever the locale changes.
+	# Each language names itself in the dropdown, and tab titles and action names
+	# are translated too, so all of it is rebuilt when the locale changes.
 	SignalBus.locale_changed.connect(_on_locale_changed)
 
+	_refresh_translated_text()
+	_build_controls_tab()
 	_show_current_values()
+
+
+func _refresh_translated_text() -> void:
+	_populate_options()
+	for i in mini(TAB_TITLE_KEYS.size(), tabs.get_tab_count()):
+		tabs.set_tab_title(i, tr(TAB_TITLE_KEYS[i]))
 
 
 func _populate_options() -> void:
@@ -58,37 +78,35 @@ func _show_current_values() -> void:
 
 
 func _on_locale_changed(_locale: String) -> void:
-	_populate_options()
+	_refresh_translated_text()
 	_show_current_values()
-	# Action names are translated too.
 	_build_controls_tab()
 
 
 ## One rebindable row per project-defined action, in the order they're declared in
-## Project Settings. The placeholder buttons that used to live in this tab are
-## cleared out first, so the scene needs no maintenance as actions come and go.
+## Project Settings, so the scene needs no maintenance as actions come and go.
 func _build_controls_tab() -> void:
-	for child in controls_tab.get_children():
-		controls_tab.remove_child(child)
+	for child in controls_list.get_children():
+		controls_list.remove_child(child)
 		child.queue_free()
 
 	var actions: Array[String] = Settings.get_remappable_actions()
 	if actions.is_empty():
 		var empty: Label = Label.new()
 		empty.text = "CONTROLS_NONE"
-		controls_tab.add_child(empty)
+		controls_list.add_child(empty)
 		return
 
 	for action in actions:
 		var row: Node = KEY_MAP_ROW.instantiate()
 		# Set before entering the tree: KeyMapButton reads it in _ready.
 		row.mapped_action = action
-		controls_tab.add_child(row)
+		controls_list.add_child(row)
 
 	var reset: Button = Button.new()
-	reset.text = "CONTROLS_RESET"
+	reset.text = tr("CONTROLS_RESET")
 	reset.pressed.connect(_on_reset_controls_pressed)
-	controls_tab.add_child(reset)
+	controls_list.add_child(reset)
 
 
 func _on_reset_controls_pressed() -> void:

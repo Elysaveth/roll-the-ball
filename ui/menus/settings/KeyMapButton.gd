@@ -33,7 +33,10 @@ func _ready() -> void:
 ## translation entry first.
 static func action_display_name(action: String) -> String:
 	var key: String = "ACTION_" + action.to_upper()
-	var translated: String = TranslationServer.translate(key)
+	# TranslationServer.translate() returns a StringName, so it gets wrapped
+	# everywhere in this file: mixing the two types in a ternary is a warning, and
+	# StringName has no `%` operator for formatting.
+	var translated: String = String(TranslationServer.translate(key))
 	if translated != key:
 		return translated
 	return action.replace("_", " ").capitalize()
@@ -96,8 +99,10 @@ func _apply_binding(event: InputEvent) -> void:
 
 func _refresh_label() -> void:
 	var events: Array[InputEvent] = InputMap.action_get_events(mapped_action)
-	key_button.text = event_display_name(events[0]) if not events.is_empty() \
-		else TranslationServer.translate("CONTROLS_UNBOUND")
+	if events.is_empty():
+		key_button.text = String(TranslationServer.translate("CONTROLS_UNBOUND"))
+	else:
+		key_button.text = event_display_name(events[0])
 
 
 ## Static, so it goes through TranslationServer rather than tr() — tr() is a Node
@@ -106,5 +111,5 @@ static func event_display_name(event: InputEvent) -> String:
 	if event is InputEventKey:
 		return event.as_text_key_label()
 	if event is InputEventMouseButton:
-		return TranslationServer.translate("CONTROLS_MOUSE_BUTTON") % event.button_index
+		return String(TranslationServer.translate("CONTROLS_MOUSE_BUTTON")) % event.button_index
 	return event.as_text()
