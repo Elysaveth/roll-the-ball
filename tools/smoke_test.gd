@@ -1409,11 +1409,28 @@ func _test_tutorial() -> void:
 	check(level.get_node("Geometry/LeftLedge").visible, "the platform appears with the ball")
 	check(level.get_ball() != null, "and the ball is spawned")
 
+	var balloon_before: float = tutorial.balloon.offset_bottom
+	check(is_zero_approx(tutorial.get_lift()), "Joe starts down at the bottom")
 	tutorial._advance()
 	check(level.get_node("Goal").visible, "the basket appears next")
+	# The basket sits directly behind the balloon, so the pair have to move.
+	check(tutorial.get_lift() > 0.0, "Joe and the balloon hop up out of the basket's way")
+	# The tween needs a moment; the target offsets are what matter.
+	for i in range(30):
+		await get_tree().process_frame
+	check(
+		tutorial.balloon.offset_bottom < balloon_before,
+		"the balloon really ends up higher (%.0f -> %.0f)" % [balloon_before, tutorial.balloon.offset_bottom]
+	)
+	check(
+		tutorial.joe.offset_bottom < tutorial._joe_rest.y,
+		"and Joe goes with it"
+	)
 
+	var lifted: float = tutorial.get_lift()
 	tutorial._advance()
 	check(hud.time_label.visible, "then the clock")
+	check(is_equal_approx(tutorial.get_lift(), lifted), "and they stay up for the rest of it")
 
 	tutorial._advance()
 	check(hud.palette_items.get_parent().visible, "then the palette")
