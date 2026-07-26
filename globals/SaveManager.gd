@@ -197,16 +197,6 @@ func save_profile() -> bool:
 	return false
 
 
-## What a brand-new player starts with. Currently every implemented prop, so the
-## game is playable end to end — trim this down as the unlock curve gets
-## designed, and hand the rest out through unlock_prop() / the workshop.
-const STARTING_PROPS: Array[String] = [
-	"hielo", "madera", "metal", "moai", "pinball", "muelle", "canon",
-	"cohete_little", "cohete_big", "bomb", "dinamita", "tntminecraft",
-	"portal_in", "portal_out",
-]
-
-
 func _default_profile() -> Dictionary:
 	return {
 		"profile_version": PROFILE_VERSION,
@@ -214,7 +204,10 @@ func _default_profile() -> Dictionary:
 		"time_bank": STARTING_BANK,
 		"highest_unlocked_level": 1,
 		"best_times": {},        # keys are level ids AS STRINGS — see _best_times()
-		"unlocked_props": STARTING_PROPS.duplicate(),
+		# Only props granted OUTSIDE the level progression live here — workshop
+		# blueprints. What a level hands out is derived from PropUnlocks, so the
+		# unlock curve can be retuned without rewriting anybody's save.
+		"unlocked_props": [],
 		"materials": {},         # material id -> count, for blueprint crafting later
 		"broken_counts": {},     # what the player has destroyed, feeds materials
 		"tutorial_seen": false,  # so it doesn't replay after every failed attempt
@@ -390,10 +383,15 @@ func get_unlocked_props() -> Array:
 	return _profile.get("unlocked_props", [])
 
 
+## A prop is owned once its unlock level has been reached, or once a blueprint has
+## granted it outright. Two independent routes, and neither can revoke the other —
+## which is what makes "you keep anything you unlock" true.
 func is_prop_unlocked(prop_id: String) -> bool:
 	if Settings.debug_unlock_all:
 		return true
-	return prop_id in get_unlocked_props()
+	if prop_id in get_unlocked_props():
+		return true
+	return PropUnlocks.unlock_level_for(prop_id) <= get_highest_unlocked_level()
 
 
 func unlock_prop(prop_id: String) -> void:

@@ -48,6 +48,14 @@ class_name PlaceableObject
 ## that are *meant* to be layered — ice planks crossing to form a junction, say.
 @export var exclusive_placement: bool = true
 
+## Which AnimatedSprite2D frame represents this prop in the toolbar. -1 means "whatever
+## frame the sprite is authored on".
+##
+## Only matters for props drawn with an AnimatedSprite2D, where the resting frame and
+## the flattering one aren't always the same — a spring should advertise itself
+## extended, even if it sits compressed in the level.
+@export var palette_icon_frame: int = -1
+
 @export_group("Breaking")
 ## Breakable props shatter when hit hard enough, dropping the material the
 ## workshop's blueprints are crafted from.

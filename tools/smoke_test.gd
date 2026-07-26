@@ -86,6 +86,7 @@ func _run() -> void:
 	await _phase("progress follows the name", _test_progress_per_player)
 	await _phase("tutorial", _test_tutorial)
 	await _phase("first clear outro", _test_first_clear_outro)
+	await _phase("prop unlock curve", _test_prop_unlocks)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -464,6 +465,21 @@ func _test_translations() -> void:
 	TranslationServer.set_locale("es")
 	check(tr("MENU_PLAY") == "Jugar", "Spanish translation applies (MENU_PLAY -> '%s')" % tr("MENU_PLAY"))
 
+	# Joe's dialogue is DATA — the keys live in the step tables, not in a .tscn — so a
+	# line that was never added, or one lost when strings.csv is hand-edited, produces
+	# a balloon showing the raw key instead of an error. Reading the keys back out of
+	# the tables is the only way to catch that.
+	TranslationServer.set_locale("en")
+	for step in Tutorial.STEPS + Tutorial.OUTRO_STEPS:
+		var key: String = str(step.get("text", ""))
+		check(not key.is_empty(), "every dialogue step names a key")
+		if key.is_empty():
+			continue
+		check(tr(key) != key, "dialogue '%s' has a line" % key)
+		TranslationServer.set_locale("es")
+		check(tr(key) != key, "dialogue '%s' is translated too" % key)
+		TranslationServer.set_locale("en")
+
 	# English is the default, so leave it that way for anything downstream.
 	TranslationServer.set_locale("en")
 	check(Settings.LOCALES[0] == "en", "English is the first/default locale option")
@@ -738,7 +754,7 @@ func _test_settings_menu_layout() -> void:
 ## silently never appears in the toolbar.
 func _test_every_prop_loads() -> void:
 	print("\n[every prop loads]")
-	var expected: PackedStringArray = SaveManager.STARTING_PROPS
+	var expected: Array[String] = PropUnlocks.all_prop_ids()
 	var found: Array[String] = []
 	var container: Node = GameManager.get_placed_objects_container()
 	LevelLayout.clear(container)
@@ -765,7 +781,7 @@ func _test_every_prop_loads() -> void:
 		prop.free()
 
 	for prop_id in expected:
-		check(prop_id in found, "'%s' from STARTING_PROPS has a scene" % prop_id)
+		check(prop_id in found, "'%s' from the unlock table has a scene" % prop_id)
 
 
 func _all_prop_scenes() -> Array[String]:
@@ -1526,6 +1542,110 @@ func _test_first_clear_outro() -> void:
 	SaveManager.mark_outro_seen()
 	hud.release_result_panel()
 	hud.show_pause_demo(false)
+
+
+## The unlock table is the single place the curve is declared, so it has to stay
+## consistent with what's actually on disk and with what the palette shows.
+func _test_prop_unlocks() -> void:
+	print("\n[prop unlock curve]")
+
+	# Every listed prop must point at a scene that exists and carries that id, or the
+	# palette silently drops it.
+	for prop_id in PropUnlocks.all_prop_ids():
+		var path: String = PropUnlocks.scene_path_for(prop_id)
+		check(ResourceLoader.exists(path), "'%s' points at a real scene" % prop_id)
+		if not ResourceLoader.exists(path):
+			continue
+		var node: Node = load(path).instantiate()
+		if node is PlaceableObject:
+			check(
+				node.prop_id == prop_id,
+				"'%s' matches its scene's prop_id ('%s')" % [prop_id, node.prop_id]
+			)
+		else:
+			check(false, "'%s' roots a PlaceableObject" % prop_id)
+		node.free()
+
+	# Every prop needs artwork in the toolbar. A blank slot is silent — the prop is
+	# still draggable, it just looks like a gap — so nothing else would catch it. This
+	# is how the spring shipped iconless after being redrawn as an AnimatedSprite2D.
+	var hud_for_icons: HUDController = _main.get_node_or_null("UI/HUD")
+	if hud_for_icons != null:
+		for prop_id in PropUnlocks.all_prop_ids():
+			var path: String = PropUnlocks.scene_path_for(prop_id)
+			if not ResourceLoader.exists(path):
+				continue
+			var info: Dictionary = hud_for_icons._inspect_prop(load(path))
+			check(
+				info.get("icon") != null,
+				"'%s' has a palette icon" % prop_id
+			)
+
+	# Level 1 is a starting kit, not the whole box — that was the bug.
+	var at_one: Array[String] = PropUnlocks.props_unlocked_at(1)
+	check(at_one.size() < PropUnlocks.all_prop_ids().size(), "level 1 does not hand over everything")
+	check("hielo" in at_one, "but it does include the ice plank")
+	check(not ("tntminecraft" in at_one), "and not the TNT")
+
+	# Reaching further only ever adds.
+	var at_five: Array[String] = PropUnlocks.props_unlocked_at(5)
+	check(at_five.size() > at_one.size(), "later levels unlock more (%d -> %d)" % [at_one.size(), at_five.size()])
+	for prop_id in at_one:
+		check(prop_id in at_five, "'%s' is still owned later — props are kept" % prop_id)
+
+	# props_introduced_at is the "this level gives you something" hook.
+	var introduced: Array[String] = PropUnlocks.props_introduced_at(1)
+	check(not introduced.is_empty(), "level 1 introduces something")
+	for prop_id in introduced:
+		check(PropUnlocks.unlock_level_for(prop_id) == 1, "'%s' is introduced exactly at 1" % prop_id)
+
+	# --- what the player actually sees ---------------------------------------
+	SaveManager.switch_player("__unlock_probe__")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("__unlock_probe__")
+	var was_debug: bool = Settings.debug_unlock_all
+	Settings.set_debug_unlock_all(false)
+
+	check(SaveManager.is_prop_unlocked("hielo"), "a new player owns the level 1 props")
+	check(not SaveManager.is_prop_unlocked("tntminecraft"), "and not the late ones")
+
+	SaveManager.unlock_level(PropUnlocks.unlock_level_for("tntminecraft"))
+	check(SaveManager.is_prop_unlocked("tntminecraft"), "reaching its level unlocks it")
+	check(SaveManager.is_prop_unlocked("hielo"), "without taking anything away")
+
+	# A blueprint grants a prop outright, independently of the level curve.
+	SaveManager.switch_player("__unlock_probe2__")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("__unlock_probe2__")
+	check(not SaveManager.is_prop_unlocked("cohete_big"), "a late prop starts locked")
+	SaveManager.unlock_prop("cohete_big")
+	check(SaveManager.is_prop_unlocked("cohete_big"), "a blueprint can grant it early")
+
+	# And the palette reflects it: level 1 must offer only what a new player owns.
+	SaveManager.switch_player("__unlock_probe3__")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("__unlock_probe3__")
+	SaveManager.mark_tutorial_seen()
+	SaveManager.mark_outro_seen()
+	var hud: HUDController = _main.get_node_or_null("UI/HUD")
+	if hud != null:
+		hud._build_palette()
+		var shown: int = hud.palette_items.get_child_count()
+		check(
+			shown == PropUnlocks.props_unlocked_at(1).size(),
+			"the palette shows exactly the owned props (%d of %d)" % [
+				shown, PropUnlocks.all_prop_ids().size()
+			]
+		)
+		check(shown > 0, "and it isn't empty")
+
+	Settings.set_debug_unlock_all(was_debug)
+	for junk in ["__unlock_probe__", "__unlock_probe2__", "__unlock_probe3__"]:
+		SaveManager.switch_player(junk)
+		SaveManager.erase_all_data()
+	SaveManager.switch_player(TEST_PLAYER)
+	SaveManager.mark_tutorial_seen()
+	SaveManager.mark_outro_seen()
 
 
 # ---------------------------------------------------------------- helpers ----

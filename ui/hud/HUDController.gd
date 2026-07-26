@@ -259,7 +259,14 @@ func _build_palette() -> void:
 	if level == null:
 		return
 
-	for scene in level.available_props:
+	# An empty available_props means "whatever the player owns", which is the sane
+	# default: a level only needs to fill it in when it deliberately RESTRICTS the
+	# choice. Otherwise every new prop would have to be added to every level by hand.
+	var offered: Array[PackedScene] = level.available_props
+	if offered.is_empty():
+		offered = PropUnlocks.unlocked_scenes()
+
+	for scene in offered:
 		if scene == null:
 			continue
 		var info: Dictionary = _inspect_prop(scene)
@@ -289,6 +296,15 @@ func _inspect_prop(scene: PackedScene) -> Dictionary:
 		if child is Sprite2D and child.texture != null:
 			icon_texture = child.texture
 			break
+		# Animated props are just as common as static ones now, and only looking for a
+		# Sprite2D left them with a blank slot in the toolbar.
+		if child is AnimatedSprite2D:
+			icon_texture = _animation_frame_texture(child, prop.palette_icon_frame)
+			if icon_texture != null:
+				break
+
+	if icon_texture == null:
+		push_warning("HUDController: '%s' has no artwork for the palette" % prop.prop_id)
 
 	var info: Dictionary = {
 		"prop_id": prop.prop_id,
@@ -297,6 +313,30 @@ func _inspect_prop(scene: PackedScene) -> Dictionary:
 	}
 	prop.free()
 	return info
+
+
+## One frame out of an AnimatedSprite2D, for use as a toolbar icon.
+##
+## Falls back to the sprite's own frame when the prop doesn't nominate one, and to the
+## first animation when the authored one is missing — a prop with a blank icon is easy
+## to miss, so every route here ends in a picture if one exists at all.
+func _animation_frame_texture(sprite: AnimatedSprite2D, wanted_frame: int) -> Texture2D:
+	var frames: SpriteFrames = sprite.sprite_frames
+	if frames == null:
+		return null
+
+	var animation: StringName = sprite.animation
+	if not frames.has_animation(animation):
+		var names: PackedStringArray = frames.get_animation_names()
+		if names.is_empty():
+			return null
+		animation = names[0]
+
+	var count: int = frames.get_frame_count(animation)
+	if count <= 0:
+		return null
+	var index: int = wanted_frame if wanted_frame >= 0 else sprite.frame
+	return frames.get_frame_texture(animation, clampi(index, 0, count - 1))
 
 
 # ----------------------------------------------------------------- state ----

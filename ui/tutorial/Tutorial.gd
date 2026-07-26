@@ -62,6 +62,10 @@ const OUTRO_STEPS: Array = [
 	# Showing the pause dimmer while he mentions replaying is the demonstration: that
 	# is where the way back to the level list lives.
 	{"text": "OUTRO_REPLAY", "show_pause_demo": true},
+	# The dimmer deliberately stays up under this one. Yanking it away mid-sentence
+	# would read as a glitch, and it costs nothing to leave the route on screen while
+	# he signs off.
+	{"text": "OUTRO_WORKSHOP"},
 ]
 
 const FADE_IN: float = 0.5
