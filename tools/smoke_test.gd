@@ -87,6 +87,8 @@ func _run() -> void:
 	await _phase("tutorial", _test_tutorial)
 	await _phase("first clear outro", _test_first_clear_outro)
 	await _phase("prop unlock curve", _test_prop_unlocks)
+	await _phase("debug availability", _test_debug_availability)
+	await _phase("bouncers", _test_bouncers)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -1646,6 +1648,101 @@ func _test_prop_unlocks() -> void:
 	SaveManager.switch_player(TEST_PLAYER)
 	SaveManager.mark_tutorial_seen()
 	SaveManager.mark_outro_seen()
+
+
+## Debug mode has to open EVERYTHING, and only exist in a debug build.
+func _test_debug_availability() -> void:
+	print("\n[debug availability]")
+	var was_debug: bool = Settings.debug_unlock_all
+	SaveManager.switch_player("__debug_probe__")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("__debug_probe__")
+
+	Settings.set_debug_unlock_all(false)
+	var owned_normally: int = PropUnlocks.unlocked_scenes().size()
+	check(owned_normally < PropUnlocks.all_prop_ids().size(), "a new player owns only some props")
+
+	Settings.set_debug_unlock_all(true)
+	# The palette used to filter by level BEFORE asking is_prop_unlocked, so debug could
+	# never widen it past whatever level had been reached. This is that bug.
+	check(
+		PropUnlocks.unlocked_scenes().size() == PropUnlocks.all_prop_ids().size(),
+		"debug mode offers every prop (%d of %d)" % [
+			PropUnlocks.unlocked_scenes().size(), PropUnlocks.all_prop_ids().size()
+		]
+	)
+	for prop_id in PropUnlocks.all_prop_ids():
+		check(SaveManager.is_prop_unlocked(prop_id), "debug unlocks '%s'" % prop_id)
+	check(SaveManager.is_level_unlocked(99), "and every level")
+
+	# The suite runs from the editor, which IS a debug build.
+	check(OS.is_debug_build(), "the suite runs in a debug build")
+	check(Settings.debug_tools_available(), "so the debug tools are available")
+	check(Settings.debug_unlock_all, "and the flag sticks here")
+
+	Settings.set_debug_unlock_all(was_debug)
+	SaveManager.erase_all_data()
+	SaveManager.switch_player(TEST_PLAYER)
+	SaveManager.mark_tutorial_seen()
+	SaveManager.mark_outro_seen()
+
+
+## The bumper should fling the ball; the spring should give it a shove. Measured rather
+## than asserted from the exported numbers, since what matters is the speed the ball
+## leaves with.
+func _test_bouncers() -> void:
+	print("\n[bouncers]")
+	var pinball_speed: float = await _measure_bounce("res://entities/props/pinball/pinball.tscn")
+	var spring_speed: float = await _measure_bounce("res://entities/props/muelle/muelle.tscn")
+
+	check(pinball_speed > 0.0, "the bumper launches the ball (%.0f px/s)" % pinball_speed)
+	check(spring_speed > 0.0, "the spring launches the ball (%.0f px/s)" % spring_speed)
+	check(
+		pinball_speed > spring_speed * 1.4,
+		"the bumper bounces a lot harder than the spring (%.0f vs %.0f)" % [
+			pinball_speed, spring_speed
+		]
+	)
+
+	# A bumper repels from wherever it was struck, so it can't be aimed like a cannon.
+	var bumper: Node = load("res://entities/props/pinball/pinball.tscn").instantiate()
+	check(bumper is Launcher and bumper.radial, "the bumper kicks radially")
+	var spring: Node = load("res://entities/props/muelle/muelle.tscn").instantiate()
+	check(spring is Launcher and not spring.radial, "the spring kicks in the way it faces")
+	bumper.free()
+	spring.free()
+
+
+## Drops the ball onto a prop and reports how fast it leaves. Returns 0 if it never
+## bounced at all.
+func _measure_bounce(scene_path: String) -> float:
+	var container: Node = GameManager.get_placed_objects_container()
+	var level: Level = GameManager.get_current_level()
+	LevelLayout.clear(container)
+	SaveManager._set_time_bank(60.0)
+
+	var prop: PlaceableObject = load(scene_path).instantiate()
+	container.add_child(prop)
+	prop.global_position = Vector2(700, 700)
+
+	var spawn: Vector2 = level.ball_spawn.position
+	level.ball_spawn.global_position = Vector2(700, 380)
+	GameManager.start_attempt()
+
+	var fastest_upward: float = 0.0
+	for i in range(150):
+		await get_tree().physics_frame
+		var ball: Ball = level.get_ball()
+		if ball == null:
+			continue
+		# Upward travel is the only thing a bounce can produce; falling doesn't count.
+		if ball.linear_velocity.y < 0.0:
+			fastest_upward = maxf(fastest_upward, -ball.linear_velocity.y)
+
+	GameManager.return_to_edit()
+	level.ball_spawn.position = spawn
+	LevelLayout.clear(container)
+	return fastest_upward
 
 
 # ---------------------------------------------------------------- helpers ----

@@ -71,6 +71,17 @@ func _ready() -> void:
 	_refresh_translated_text()
 	_build_controls_tab()
 	_show_current_values()
+	_apply_debug_visibility()
+
+
+## The Debug tab only exists in a debug build — running from the editor, or a debug
+## export. Players of a release build never see it.
+func _apply_debug_visibility() -> void:
+	var debug_tab: Control = tabs.get_node_or_null("Debug")
+	if debug_tab == null:
+		return
+	var index: int = debug_tab.get_index()
+	tabs.set_tab_hidden(index, not Settings.debug_tools_available())
 
 
 func _refresh_translated_text() -> void:

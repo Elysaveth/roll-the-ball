@@ -15,8 +15,12 @@ class_name Launcher
 ## Impulse applied to whatever enters the trigger, in kg·px/s.
 @export var launch_impulse: float = 1600.0
 ## Direction of the kick in the prop's LOCAL space, so rotating the prop aims it.
-## Up means "out of the top of the artwork".
+## Up means "out of the top of the artwork". Ignored when `radial` is on.
 @export var launch_direction: Vector2 = Vector2.UP
+## Kick outward from the prop's centre instead of in a fixed direction — a pinball
+## bumper repels whatever hits it, whichever side it came from, and there is no sensible
+## way to aim one.
+@export var radial: bool = false
 ## Stops a body resting in the trigger from being kicked every single frame.
 @export var cooldown_seconds: float = 0.3
 ## Optional AnimatedSprite2D child animation to play on firing.
@@ -55,6 +59,17 @@ func _on_trigger_body_entered(body: Node2D) -> void:
 
 func launch(body: RigidBody2D) -> void:
 	var direction: Vector2 = launch_direction.rotated(rotation).normalized()
+	if radial:
+		var away: Vector2 = body.global_position - global_position
+		# Straight up if the body is somehow exactly centred, rather than a zero kick.
+		direction = away.normalized() if away.length() > 0.01 else Vector2.UP
+
+	# The incoming speed is cancelled first, so the kick is the same whether the ball
+	# crept in or slammed in. A bumper that just adds to whatever arrived would send a
+	# fast ball into orbit and barely nudge a slow one.
+	var incoming: float = body.linear_velocity.dot(direction)
+	if incoming < 0.0:
+		body.apply_central_impulse(-direction * incoming * body.mass)
 	body.apply_central_impulse(direction * launch_impulse)
 	_cooldown = cooldown_seconds
 	set_physics_process(true)

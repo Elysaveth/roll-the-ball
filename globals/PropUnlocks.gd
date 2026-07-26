@@ -93,9 +93,16 @@ func props_introduced_at(level_id: int) -> Array[String]:
 
 ## Loadable scenes for everything the current player owns. Used by the palette when a
 ## level doesn't restrict what it offers.
+##
+## Every prop is considered and SaveManager decides — it must NOT pre-filter by level.
+## Doing that made the level curve the outer limit, so debug mode and workshop
+## blueprints, which both grant props outside the curve, could never widen the palette
+## past whatever level the player had reached.
 func unlocked_scenes() -> Array[PackedScene]:
 	var scenes: Array[PackedScene] = []
-	for prop_id in props_unlocked_at(SaveManager.get_highest_unlocked_level()):
+	var ordered: Array[String] = all_prop_ids()
+	ordered.sort_custom(_by_unlock_order)
+	for prop_id in ordered:
 		if not SaveManager.is_prop_unlocked(prop_id):
 			continue
 		var path: String = scene_path_for(prop_id)

@@ -58,7 +58,17 @@ var colorblind_index: int = 0
 ## Unlocks every level and prop that exists, for testing and for the other team
 ## building content. Persisted, because having to re-enable it every launch would
 ## make it useless to them.
+##
+## Only ever true in a DEBUG build — running from the editor, or a debug export. A
+## release build forces it off no matter what the settings file says, so a copy shipped
+## with the flag left on can't hand players the whole game.
 var debug_unlock_all: bool = false
+
+
+## Whether the debug tools should exist at all. The settings menu hides its Debug tab
+## when this is false.
+func debug_tools_available() -> bool:
+	return OS.is_debug_build()
 
 ## The project theme, held so text scaling can rewrite its base font size. Captured
 ## once at boot; every Control inherits from this resource.
@@ -87,7 +97,9 @@ func _read_values() -> void:
 	locale_index = int(_config.get_value("accessibility", "language_index", 0))
 	text_scale = float(_config.get_value("accessibility", "text_scale", 1.0))
 	colorblind_index = int(_config.get_value("accessibility", "colorblind", 0))
-	debug_unlock_all = bool(_config.get_value("debug", "unlock_all", false))
+	# Read, then gated: the value is remembered across runs but only honoured where the
+	# tools exist.
+	debug_unlock_all = bool(_config.get_value("debug", "unlock_all", false)) and debug_tools_available()
 
 
 func save_settings() -> void:
@@ -164,7 +176,7 @@ func set_colorblind_index(index: int) -> void:
 
 
 func set_debug_unlock_all(enabled: bool) -> void:
-	debug_unlock_all = enabled
+	debug_unlock_all = enabled and debug_tools_available()
 	save_settings()
 	# Level select and the prop palette both rebuild from this.
 	SignalBus.debug_unlock_changed.emit(enabled)

@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dskgo0flewh42"]
 
-[ext_resource type="Script" uid="uid://dy2crwglwcjxs" path="res://entities/props/PlaceableObject.gd" id="1_placeable"]
+[ext_resource type="Script" path="res://entities/props/Launcher.gd" id="1_placeable"]
 [ext_resource type="Texture2D" uid="uid://cfqdw8b7b2k0w" path="res://entities/props/pinball/pinball.png" id="2_tex"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_pinball"]
@@ -10,10 +10,17 @@ bounce = 0.95
 [sub_resource type="CircleShape2D" id="CircleShape2D_pinball"]
 radius = 80.0
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_bumper"]
+radius = 94.0
+
 [node name="Pinball" type="RigidBody2D" unique_id=212961687]
 mass = 30.0
 physics_material_override = SubResource("PhysicsMaterial_pinball")
 script = ExtResource("1_placeable")
+trigger_mode = 1
+launch_impulse = 2400.0
+radial = true
+cooldown_seconds = 0.15
 prop_id = "pinball"
 object_name = "Pinball"
 
@@ -23,3 +30,8 @@ texture = ExtResource("2_tex")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1647278858]
 shape = SubResource("CircleShape2D_pinball")
+
+[node name="Trigger" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
+shape = SubResource("CircleShape2D_bumper")
