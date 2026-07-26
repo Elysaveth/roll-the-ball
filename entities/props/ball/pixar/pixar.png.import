@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://37g4bhx3lo3y"
-path="res://.godot/imported/pixar.png-ec21bef3a3528e0a3d31d9af091b2920.ctex"
+path="res://.godot/imported/pixar.png-8b06ac4e40ebc17aa81d9e66251342cb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://entities/props/pixar/pixar.png"
-dest_files=["res://.godot/imported/pixar.png-ec21bef3a3528e0a3d31d9af091b2920.ctex"]
+source_file="res://entities/props/ball/pixar/pixar.png"
+dest_files=["res://.godot/imported/pixar.png-8b06ac4e40ebc17aa81d9e66251342cb.ctex"]
 
 [params]
 
