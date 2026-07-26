@@ -1589,8 +1589,22 @@ func _test_prop_unlocks() -> void:
 	check("hielo" in at_one, "but it does include the ice plank")
 	check(not ("tntminecraft" in at_one), "and not the TNT")
 
-	# Reaching further only ever adds.
+	# Everything is in the player's hands by level 5, and every one of the first five
+	# levels has something new to show. A prop added later without a level would sit
+	# past the end of the curve and never appear.
 	var at_five: Array[String] = PropUnlocks.props_unlocked_at(5)
+	check(
+		at_five.size() == PropUnlocks.all_prop_ids().size(),
+		"every prop is unlocked by level 5 (%d of %d)" % [
+			at_five.size(), PropUnlocks.all_prop_ids().size()
+		]
+	)
+	for stage in range(1, 6):
+		check(
+			not PropUnlocks.props_introduced_at(stage).is_empty(),
+			"level %d introduces something" % stage
+		)
+
 	check(at_five.size() > at_one.size(), "later levels unlock more (%d -> %d)" % [at_one.size(), at_five.size()])
 	for prop_id in at_one:
 		check(prop_id in at_five, "'%s' is still owned later — props are kept" % prop_id)
