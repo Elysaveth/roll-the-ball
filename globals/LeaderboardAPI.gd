@@ -176,14 +176,21 @@ func _on_goal_reached(level_id: int, attempt_time: float, bank_delta: float) -> 
 	if player_name.is_empty():
 		return
 
-	# A delta of zero means the player finished but didn't beat their record, so
-	# there is nothing new to publish.
-	if not is_zero_approx(bank_delta):
+	# Publish whenever this run beats what the BOARD has, rather than whenever it beats
+	# the player's local record.
+	#
+	# Those are different questions, and using the local one was the bug: a player who
+	# had already cleared a level got bank_delta == 0 on every replay and so never
+	# submitted anything — including all the times earned before the credentials were
+	# shipping in the build. Tracking what actually reached the board means a run that
+	# failed to upload, for any reason, is retried the next time the level is finished.
+	var published: float = SaveManager.get_uploaded_time(level_id)
+	if published < 0.0 or attempt_time < published:
 		submit_score(player_name, attempt_time, board_for_level(level_id))
 
-	# The progress board only changes when a level is cleared for the first time.
-	if bank_delta < 0.0:
-		submit_score(player_name, float(SaveManager.get_furthest_completed_level()), BOARD_GENERAL)
+	var furthest: int = SaveManager.get_furthest_completed_level()
+	if furthest > SaveManager.get_uploaded_progress():
+		submit_score(player_name, float(furthest), BOARD_GENERAL)
 
 
 # ----------------------------------------------------------------- queue ----
@@ -220,11 +227,13 @@ func _run(request: Dictionary) -> void:
 		"save":
 			SilentWolf.Scores.save_score(request["player"], _encode(board, request["score"]), board)
 			var result: Variant = await _await_or_timeout(SilentWolf.Scores.sw_save_score_complete)
-			if result:
+			var save_problem: String = _payload_error(result, "save_score")
+			if save_problem.is_empty():
+				_record_publication(board, request["score"])
 				# Reports the real value, not what went over the wire.
 				SignalBus.score_submitted.emit(board, request["player"], request["score"])
 			else:
-				SignalBus.score_submit_failed.emit(board, "save_score returned no result")
+				SignalBus.score_submit_failed.emit(board, save_problem)
 		"get":
 			SilentWolf.Scores.get_scores(request["maximum"], board)
 			var result: Variant = await _await_or_timeout(SilentWolf.Scores.sw_get_scores_complete)
@@ -243,17 +252,19 @@ func _run(request: Dictionary) -> void:
 		"delete":
 			SilentWolf.Scores.delete_score(request["score_id"], board)
 			var result: Variant = await _await_or_timeout(SilentWolf.Scores.sw_delete_score_complete)
-			if result:
+			var problem: String = _payload_error(result, "delete_score")
+			if problem.is_empty():
 				SignalBus.score_deleted.emit(board, request["score_id"])
 			else:
-				SignalBus.score_submit_failed.emit(board, "delete_score returned no result")
+				SignalBus.score_submit_failed.emit(board, problem)
 		"wipe":
 			SilentWolf.Scores.wipe_leaderboard(board)
 			var result: Variant = await _await_or_timeout(SilentWolf.Scores.sw_wipe_leaderboard_complete)
-			if result:
+			var problem: String = _payload_error(result, "wipe_leaderboard")
+			if problem.is_empty():
 				SignalBus.board_wiped.emit(board)
 			else:
-				SignalBus.score_submit_failed.emit(board, "wipe_leaderboard returned no result")
+				SignalBus.score_submit_failed.emit(board, problem)
 
 
 ## Awaits `sig`, giving up after REQUEST_TIMEOUT and returning null.
@@ -281,6 +292,34 @@ func _await_or_timeout(sig: Signal) -> Variant:
 		push_warning("LeaderboardApi: request timed out after %.0fs" % REQUEST_TIMEOUT)
 		return null
 	return state["value"]
+
+
+## Notes what made it onto a board, so the next completion knows whether there is
+## anything new to send. Only called once the API has confirmed the write.
+func _record_publication(board: String, score: float) -> void:
+	if board == BOARD_GENERAL:
+		SaveManager.record_uploaded_progress(int(round(score)))
+		return
+	for level_id in range(1, 200):
+		if board_for_level(level_id) == board:
+			SaveManager.record_uploaded_time(level_id, score)
+			return
+
+
+## Empty when the call genuinely succeeded, otherwise a description of what went wrong.
+##
+## Needed because SilentWolf emits its completion signal whether the API accepted the
+## request or REJECTED it — build_result() carries {"success": false, "error": ...} and
+## the addon only logs it. Treating "signal fired" as "it worked" made the admin tool
+## report deletions that never happened.
+func _payload_error(result: Variant, what: String) -> String:
+	if not result is Dictionary:
+		return "%s returned no result" % what
+	var payload: Dictionary = result
+	if bool(payload.get("success", false)):
+		return ""
+	var reason: Variant = payload.get("error", null)
+	return "%s was rejected: %s" % [what, str(reason) if reason != null else "no reason given"]
 
 
 func _fail(request: Dictionary, reason: String) -> void:

@@ -89,6 +89,7 @@ func _run() -> void:
 	await _phase("prop unlock curve", _test_prop_unlocks)
 	await _phase("debug availability", _test_debug_availability)
 	await _phase("bouncers", _test_bouncers)
+	await _phase("score publishing", _test_score_publishing)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -1757,6 +1758,55 @@ func _measure_bounce(scene_path: String) -> float:
 	level.ball_spawn.position = spawn
 	LevelLayout.clear(container)
 	return fastest_upward
+
+
+## What gets published is decided against the BOARD's state, not the player's local
+## record. Using the local one meant anybody who had already cleared a level got
+## bank_delta == 0 forever and never uploaded anything again — including every time
+## earned before the credentials shipped in the build.
+func _test_score_publishing() -> void:
+	print("\n[score publishing]")
+	SaveManager.switch_player("__publish_probe__")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("__publish_probe__")
+
+	check(SaveManager.get_uploaded_time(1) < 0.0, "nothing has been published for a new player")
+	check(SaveManager.get_uploaded_progress() == 0, "nor any progress")
+
+	# A local best that never reached the board must still be publishable.
+	SaveManager.charge_for_completion(1, 5.0)
+	check(SaveManager.get_best_time(1) > 0.0, "the player has a local best")
+	check(
+		SaveManager.get_uploaded_time(1) < 0.0,
+		"which is NOT the same as having published it"
+	)
+
+	SaveManager.record_uploaded_time(1, 5.0)
+	check(is_equal_approx(SaveManager.get_uploaded_time(1), 5.0), "publishing is recorded")
+
+	# Only an improvement is worth sending again.
+	SaveManager.record_uploaded_time(1, 6.0)
+	check(is_equal_approx(SaveManager.get_uploaded_time(1), 5.0), "a slower run doesn't overwrite it")
+	SaveManager.record_uploaded_time(1, 3.5)
+	check(is_equal_approx(SaveManager.get_uploaded_time(1), 3.5), "a faster one does")
+
+	SaveManager.record_uploaded_progress(3)
+	check(SaveManager.get_uploaded_progress() == 3, "progress publishing is recorded")
+	SaveManager.record_uploaded_progress(2)
+	check(SaveManager.get_uploaded_progress() == 3, "and never goes backwards")
+
+	# Per player, like everything else.
+	SaveManager.switch_player("__publish_probe2__")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("__publish_probe2__")
+	check(SaveManager.get_uploaded_time(1) < 0.0, "another name has published nothing")
+
+	for junk in ["__publish_probe__", "__publish_probe2__"]:
+		SaveManager.switch_player(junk)
+		SaveManager.erase_all_data()
+	SaveManager.switch_player(TEST_PLAYER)
+	SaveManager.mark_tutorial_seen()
+	SaveManager.mark_outro_seen()
 
 
 # ---------------------------------------------------------------- helpers ----

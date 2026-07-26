@@ -210,6 +210,11 @@ func _default_profile() -> Dictionary:
 		"unlocked_props": [],
 		"materials": {},         # material id -> count, for blueprint crafting later
 		"broken_counts": {},     # what the player has destroyed, feeds materials
+		# What has actually reached the leaderboard, which is NOT the same as what the
+		# player has achieved — a run earned while offline, or before the credentials
+		# shipped, leaves the two out of step.
+		"uploaded_times": {},    # level id (as a string) -> best time published
+		"uploaded_progress": 0,  # furthest level published to the general board
 		"tutorial_seen": false,  # so it doesn't replay after every failed attempt
 		"outro_seen": false,     # Joe's follow-up, shown once on the first clear
 	}
@@ -248,6 +253,36 @@ func mark_tutorial_seen() -> void:
 		return
 	_profile["tutorial_seen"] = true
 	save_profile()
+
+
+## The best time already published for `level_id`, or -1.0 if nothing has been.
+func get_uploaded_time(level_id: int) -> float:
+	return float(_uploaded_times().get(str(level_id), -1.0))
+
+
+func record_uploaded_time(level_id: int, seconds: float) -> void:
+	var previous: float = get_uploaded_time(level_id)
+	if previous >= 0.0 and seconds >= previous:
+		return
+	_uploaded_times()[str(level_id)] = seconds
+	save_profile()
+
+
+func get_uploaded_progress() -> int:
+	return int(_profile.get("uploaded_progress", 0))
+
+
+func record_uploaded_progress(level_id: int) -> void:
+	if level_id <= get_uploaded_progress():
+		return
+	_profile["uploaded_progress"] = level_id
+	save_profile()
+
+
+func _uploaded_times() -> Dictionary:
+	if not _profile.get("uploaded_times") is Dictionary:
+		_profile["uploaded_times"] = {}
+	return _profile["uploaded_times"]
 
 
 func has_seen_outro() -> bool:
