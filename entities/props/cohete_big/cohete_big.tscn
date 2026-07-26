@@ -19,13 +19,19 @@ script = ExtResource("1_script")
 mass = 9.0
 prop_id = "cohete_big"
 object_name = "Big rocket"
-anchored = false
-thrust = 4200.0
-burn_seconds = 1.4
+thrust_gravities = 3.2
+burn_seconds = 1.5
 thrust_direction = Vector2(0, -1)
 explosion_scene = ExtResource("3_boom")
-explosion_radius = 260.0
-explosion_force = 1800.0
+explosion_radius = 280.0
+explosion_force = 1900.0
+ignite_mode = 2
+ignite_delay = 0.5
+wobble_torque = 1.2
+explode_on_burnout = true
+explode_on_impact = true
+impact_impulse = 900.0
+shake_strength = 14.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.34, 0.34)

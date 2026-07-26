@@ -20,11 +20,14 @@ mass = 12.0
 prop_id = "tntminecraft"
 object_name = "TNT"
 explosion_scene = ExtResource("3_boom")
-blast_radius = 420.0
-blast_force = 3000.0
-fuse_seconds = 1.2
-break_power = 2.0
-shake_strength = 26.0
+blast_radius = 440.0
+blast_force = 3200.0
+fuse_seconds = 0.6
+break_power = 2.5
+shake_strength = 28.0
+trigger_mode = 2
+arm_delay = 1.5
+chain_reaction = true
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.13, 0.13)

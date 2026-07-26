@@ -18,10 +18,16 @@ script = ExtResource("1_script")
 mass = 4.0
 prop_id = "cohete_little"
 object_name = "Small rocket"
-anchored = false
-thrust = 2600.0
-burn_seconds = 1.0
+thrust_gravities = 2.2
+burn_seconds = 0.9
 thrust_direction = Vector2(0, -1)
+ignite_mode = 0
+ignite_delay = 0.0
+wobble_torque = 0.0
+explode_on_burnout = false
+explode_on_impact = false
+explosion_radius = 0.0
+explosion_force = 0.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.28, 0.28)

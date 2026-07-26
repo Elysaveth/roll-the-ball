@@ -20,6 +20,7 @@ const KEY_MAP_ROW: PackedScene = preload("res://ui/menus/settings/KeyMapButton.t
 const TAB_TITLE_KEYS: PackedStringArray = [
 	"SETTINGS_TAB_AUDIO",
 	"SETTINGS_TAB_DISPLAY",
+	"SETTINGS_TAB_LANGUAGE",
 	"SETTINGS_TAB_VISUALS",
 	"SETTINGS_TAB_ACCESSIBILITY",
 	"SETTINGS_TAB_CONTROLS",

@@ -19,7 +19,10 @@ const LOCALES: PackedStringArray = ["en", "es"]
 ## Keys resolved through the translations themselves, so each language names
 ## itself in the list.
 const LOCALE_LABEL_KEYS: PackedStringArray = ["SETTINGS_LANGUAGE_EN", "SETTINGS_LANGUAGE_ES"]
-const FPS_OPTIONS: PackedInt32Array = [60, 120, 0] # 0 means uncapped
+## 0 would mean uncapped; not offered, since a physics puzzle gains nothing from
+## running at 400fps. Add it back by appending 0 here — the menu builds itself
+## from this list.
+const FPS_OPTIONS: PackedInt32Array = [30, 60]
 
 ## Buses come from assets/audio/default_bus_layout.tres. Music and SFX are real
 ## buses rather than multipliers, so a future mixer or ducking effect has somewhere
@@ -44,7 +47,7 @@ const MAX_TEXT_SCALE: float = 1.6
 var master_volume: float = 1.0
 var music_volume: float = 1.0
 var sfx_volume: float = 1.0
-var fps_index: int = 0
+var fps_index: int = 1 # 60fps
 var vsync_enabled: bool = true
 var particles_enabled: bool = true
 var screen_shake_enabled: bool = true
@@ -77,7 +80,7 @@ func _read_values() -> void:
 	master_volume = float(_config.get_value("audio", "master_volume", 1.0))
 	music_volume = float(_config.get_value("audio", "music_volume", 1.0))
 	sfx_volume = float(_config.get_value("audio", "sfx_volume", 1.0))
-	fps_index = int(_config.get_value("display", "fps_index", 0))
+	fps_index = int(_config.get_value("display", "fps_index", 1))
 	vsync_enabled = bool(_config.get_value("display", "vsync", true))
 	particles_enabled = bool(_config.get_value("visuals", "particles", true))
 	screen_shake_enabled = bool(_config.get_value("visuals", "screen_shake", true))

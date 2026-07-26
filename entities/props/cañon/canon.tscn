@@ -21,7 +21,7 @@ object_name = "Cannon"
 launch_impulse = 2400.0
 launch_direction = Vector2(0, -1)
 cooldown_seconds = 0.5
-launch_group = "ball"
+trigger_mode = 0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.3, 0.3)

@@ -142,11 +142,32 @@ text = "SETTINGS_VSYNC"
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Visuals" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
+[node name="Language" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 18
 metadata/_tab_index = 2
+
+[node name="LanguageRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Language"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Language/LanguageRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SETTINGS_LANGUAGE"
+
+[node name="Language" type="OptionButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Language/LanguageRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+
+[node name="Visuals" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 18
+metadata/_tab_index = 3
 
 [node name="ParticlesToggle" type="CheckButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Visuals"]
 unique_name_in_owner = true
@@ -162,22 +183,7 @@ text = "SETTINGS_SCREEN_SHAKE"
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 18
-metadata/_tab_index = 3
-
-[node name="LanguageRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Label" type="Label" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility/LanguageRow"]
-custom_minimum_size = Vector2(280, 0)
-layout_mode = 2
-size_flags_vertical = 4
-text = "SETTINGS_LANGUAGE"
-
-[node name="Language" type="OptionButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility/LanguageRow"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 0)
-layout_mode = 2
+metadata/_tab_index = 4
 
 [node name="TextSizeRow" type="HBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Accessibility"]
 layout_mode = 2
@@ -220,7 +226,7 @@ text = "SETTINGS_CLOSED_CAPTIONS"
 visible = false
 layout_mode = 2
 horizontal_scroll_mode = 0
-metadata/_tab_index = 4
+metadata/_tab_index = 5
 
 [node name="ControlsList" type="VBoxContainer" parent="Center/Panel/Margin/VBoxContainer/Tabs/Controls"]
 unique_name_in_owner = true
@@ -238,7 +244,7 @@ text = "LB_CLOSE"
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 18
-metadata/_tab_index = 5
+metadata/_tab_index = 6
 
 [node name="DebugUnlockAll" type="CheckButton" parent="Center/Panel/Margin/VBoxContainer/Tabs/Debug"]
 unique_name_in_owner = true

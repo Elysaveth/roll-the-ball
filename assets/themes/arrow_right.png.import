@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://xni5s8h8j4xu"
-path="res://.godot/imported/crazyjoe.png-fbb1eecf476b7d9230da7cd14e309000.ctex"
+uid="uid://s80222l0qiyk"
+path="res://.godot/imported/arrow_right.png-5315a4dd884e8e3fbd182b3297f40871.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://entities/props/crazyjoe/crazyjoe.png"
-dest_files=["res://.godot/imported/crazyjoe.png-fbb1eecf476b7d9230da7cd14e309000.ctex"]
+source_file="res://assets/themes/arrow_right.png"
+dest_files=["res://.godot/imported/arrow_right.png-5315a4dd884e8e3fbd182b3297f40871.ctex"]
 
 [params]
 

@@ -74,6 +74,13 @@ func _run() -> void:
 	await _phase("moai falls", _test_moai_falls)
 	await _phase("settings coverage", _test_settings_coverage)
 	await _phase("debug unlock", _test_debug_unlock)
+	await _phase("keybinding labels", _test_keybinding_labels)
+	await _phase("theme polish", _test_theme_polish)
+	await _phase("rockets fly", _test_rockets_fly)
+	await _phase("prop tuning differs", _test_prop_tuning_differs)
+	await _phase("pause dims rather than panels", _test_pause_overlay)
+	await _phase("wood cracks on impact only", _test_wood_cracks_on_impact)
+	await _phase("bomb is instant", _test_bomb_is_instant)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -123,6 +130,8 @@ func _test_hud_is_wired() -> void:
 	check(controller.palette_items != null, "PaletteItems resolved")
 	check(controller.prop_menu != null, "PropMenu resolved")
 	check(controller.result_panel != null, "ResultPanel resolved")
+	check(controller.pause_overlay != null, "the pause dimmer resolved")
+	check(controller.pause_resume_button != null, "the pause Resume button resolved")
 	check(controller.leaderboard != null, "the embedded leaderboard panel resolved")
 	# Typed loosely to dodge the class cache, so confirm its script is really on.
 	check(
@@ -690,7 +699,7 @@ func _test_settings_menu_layout() -> void:
 	check(tabs != null, "the tab container resolves by unique name")
 	if tabs != null:
 		check(tabs.custom_minimum_size.y > 0.0, "the tab box has a minimum height (%.0f)" % tabs.custom_minimum_size.y)
-		check(tabs.get_tab_count() == 6, "all six tabs are present (%d)" % tabs.get_tab_count())
+		check(tabs.get_tab_count() == 7, "all seven tabs are present (%d)" % tabs.get_tab_count())
 		# Titles come from translations, not node names.
 		check(tabs.get_tab_title(0) == tr("SETTINGS_TAB_AUDIO"), "tab titles are translated ('%s')" % tabs.get_tab_title(0))
 
@@ -930,6 +939,265 @@ func _test_debug_unlock() -> void:
 	Settings.set_debug_unlock_all(false)
 	check(not SaveManager.is_level_unlocked(5), "turning it off restores real progression")
 	Settings.set_debug_unlock_all(restore)
+
+
+## Every default binding must render a readable key name. The project sets only
+## `physical_keycode`, and as_text_key_label() reads `key_label` — so this silently
+## showed every control as unbound until the lookup went through the keyboard layout.
+func _test_keybinding_labels() -> void:
+	print("\n[keybinding labels]")
+	var unbound: String = tr("CONTROLS_UNBOUND")
+	for action in Settings.get_remappable_actions():
+		var events: Array[InputEvent] = InputMap.action_get_events(action)
+		if events.is_empty():
+			check(false, "'%s' has a default binding" % action)
+			continue
+		var label: String = KeyMapButton.event_display_name(events[0])
+		check(
+			not label.is_empty() and label != unbound,
+			"'%s' shows a key name ('%s')" % [action, label]
+		)
+
+
+func _test_theme_polish() -> void:
+	print("\n[theme polish]")
+	var theme: Theme = load(str(ProjectSettings.get_setting("gui/theme/custom", "")))
+	if theme == null:
+		check(false, "the theme loads")
+		return
+
+	# A StyleBoxFlat with no margins has no minimum height, so the slider track drew
+	# as nothing at all.
+	var track: StyleBox = theme.get_stylebox("slider", "HSlider")
+	check(track.get_minimum_size().y >= 6.0, "the slider track has real thickness (%.0fpx)" % track.get_minimum_size().y)
+	var fill: StyleBox = theme.get_stylebox("grabber_area", "HSlider")
+	check(fill.get_minimum_size().y >= 6.0, "the slider fill has real thickness")
+
+	# Toggles carry their styling in the switch artwork; a torn frame around them
+	# looked wrong, so no state may use a textured box.
+	for type_name in ["CheckButton", "CheckBox"]:
+		for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+			var box: StyleBox = theme.get_stylebox(state, type_name)
+			check(
+				not box is StyleBoxTexture,
+				"%s.%s has no torn frame" % [type_name, state]
+			)
+
+	# Text scaling is an accessibility feature, so it has to reach EVERY piece of
+	# text — tab titles included. An overflowing tab strip is the accepted cost, and
+	# it scrolls with the themed arrows below.
+	# get_font_size_list, not has_font_size: the latter returns true whenever the
+	# theme has ANY default_font_size, so it can't tell an explicit override apart
+	# from inheritance.
+	check(
+		theme.get_font_size_list("TabContainer").is_empty(),
+		"tab titles follow the global font size rather than a fixed one"
+	)
+	var restore: float = Settings.text_scale
+	var base: int = theme.default_font_size
+	Settings.set_text_scale(Settings.MAX_TEXT_SCALE)
+	check(theme.default_font_size > base, "a larger text setting scales the base font size")
+	Settings.set_text_scale(restore)
+
+	for icon in ["increment", "decrement"]:
+		check(theme.has_icon(icon, "TabContainer"), "the tab strip's %s arrow is themed" % icon)
+
+	check(Settings.FPS_OPTIONS.size() == 2, "there are two frame rate options")
+	check(30 in Settings.FPS_OPTIONS and 60 in Settings.FPS_OPTIONS, "they are 30 and 60")
+
+
+## The rocket's whole point is that it FLIES. Left permanently unanchored it fell over
+## the moment PLAY started and all anyone saw was the explosion at the end.
+func _test_rockets_fly() -> void:
+	print("\n[rockets fly]")
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+	SaveManager._set_time_bank(60.0)
+
+	var rocket: Rocket = load("res://entities/props/cohete_little/cohete_little.tscn").instantiate()
+	container.add_child(rocket)
+	rocket.global_position = Vector2(700, 700)
+	# Drive it off the start of the attempt so no ball contact is needed.
+	rocket.ignite_mode = PlaceableObject.TriggerMode.ON_PLAY
+	rocket.ignite_delay = 0.0
+	check(rocket.anchored, "a rocket sits anchored on its mount until it lights")
+
+	GameManager.start_attempt()
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(not rocket.anchored, "igniting releases it from the mount")
+	check(not rocket.freeze, "and unfreezes it so the engine can move it")
+
+	var launched_from: Vector2 = rocket.global_position
+	for i in range(30):
+		await get_tree().physics_frame
+		if not is_instance_valid(rocket):
+			break
+	check(is_instance_valid(rocket), "the small rocket does not explode")
+	if is_instance_valid(rocket):
+		var travelled: float = launched_from.y - rocket.global_position.y
+		# Upward against gravity is only possible under thrust.
+		check(travelled > 20.0, "it is propelled upward against gravity (%.0fpx)" % travelled)
+
+	GameManager.return_to_edit()
+	LevelLayout.clear(container)
+
+
+## Every reactive prop exposes the same knobs, and each scene sets them differently —
+## otherwise the props are one behaviour wearing three costumes.
+func _test_prop_tuning_differs() -> void:
+	print("\n[prop tuning differs]")
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+
+	var profiles: Dictionary = {}
+	for name in ["bomb", "dinamita", "tntminecraft"]:
+		var path: String = "res://entities/props/%s/%s.tscn" % [name, name]
+		var node: Node = load(path).instantiate()
+		container.add_child(node)
+		var boom: Explosive = node
+		profiles[name] = {
+			"radius": boom.blast_radius,
+			"force": boom.blast_force,
+			"fuse": boom.fuse_seconds,
+			"break": boom.break_power,
+			"trigger": boom.trigger_mode,
+		}
+		container.remove_child(boom)
+		boom.free()
+
+	check(
+		profiles["bomb"]["radius"] < profiles["dinamita"]["radius"]
+			and profiles["dinamita"]["radius"] < profiles["tntminecraft"]["radius"],
+		"blast radius grows bomb < dynamite < TNT"
+	)
+	check(
+		is_zero_approx(profiles["bomb"]["fuse"]) and profiles["dinamita"]["fuse"] > 0.5,
+		"the bomb goes off on contact while the dynamite has a real fuse"
+	)
+	check(
+		profiles["tntminecraft"]["trigger"] == PlaceableObject.TriggerMode.ON_PLAY,
+		"the TNT is on a timer rather than contact-triggered"
+	)
+	check(
+		profiles["bomb"]["break"] < profiles["tntminecraft"]["break"],
+		"breaking power is tuned separately from throwing force"
+	)
+
+	# Launchers differ in what they react to, not just how hard they hit.
+	var cannon: Launcher = load("res://entities/props/cañon/canon.tscn").instantiate()
+	var spring: Launcher = load("res://entities/props/muelle/muelle.tscn").instantiate()
+	container.add_child(cannon)
+	container.add_child(spring)
+	check(cannon.trigger_mode == PlaceableObject.TriggerMode.BALL_CONTACT, "the cannon only fires at the ball")
+	check(spring.trigger_mode == PlaceableObject.TriggerMode.ANY_CONTACT, "the spring throws anything that lands on it")
+	check(cannon.launch_impulse > spring.launch_impulse, "the cannon hits harder than the spring")
+	LevelLayout.clear(container)
+
+
+## Pausing must dim the level, not cover it — the whole reason to pause is to look at
+## what the simulation did.
+func _test_pause_overlay() -> void:
+	print("\n[pause dims rather than panels]")
+	var hud: HUDController = _main.get_node_or_null("UI/HUD")
+	if hud == null:
+		check(false, "the HUD is available")
+		return
+
+	LevelLayout.clear(GameManager.get_placed_objects_container())
+	SaveManager._set_time_bank(60.0)
+	GameManager.start_attempt()
+	await get_tree().physics_frame
+
+	GameManager.pause()
+	await get_tree().process_frame
+	check(hud.pause_overlay.visible, "pausing shows the dimmer")
+	check(not hud.result_panel.visible, "and does NOT open a panel over the level")
+	check(hud.pause_overlay.color.a < 1.0, "the dimmer is translucent (alpha %.2f)" % hud.pause_overlay.color.a)
+	# It has to swallow clicks, or props stay draggable through the dimmer.
+	check(hud.pause_overlay.mouse_filter != Control.MOUSE_FILTER_IGNORE, "it blocks input to the level")
+
+	GameManager.resume()
+	await get_tree().process_frame
+	check(not hud.pause_overlay.visible, "resuming hides it again")
+
+	GameManager.return_to_edit()
+	await get_tree().process_frame
+	check(not hud.pause_overlay.visible, "and it stays hidden in EDIT")
+
+
+## The distinction that matters: a ball ROLLING over a plank must not break it, while
+## a ball DROPPING onto it must. Anchored props are frozen and report no contacts of
+## their own, so this only works because the moving body reports what it hit.
+func _test_wood_cracks_on_impact() -> void:
+	print("\n[wood cracks on impact only]")
+	var container: Node = GameManager.get_placed_objects_container()
+	var level: Level = GameManager.get_current_level()
+	SaveManager._set_time_bank(60.0)
+
+	# --- rolling across it: must survive ---
+	LevelLayout.clear(container)
+	var plank: PlaceableObject = load("res://entities/props/madera/madera.tscn").instantiate()
+	container.add_child(plank)
+	check(plank.anchored, "the plank is anchored, so it reports no contacts itself")
+
+	var spawn: Vector2 = level.ball_spawn.position
+	# Sit the plank just under the ball's start so it rolls along it off the ledge.
+	plank.global_position = level.ball_spawn.global_position + Vector2(60, 40)
+	GameManager.start_attempt()
+	for i in range(90):
+		await get_tree().physics_frame
+		if not is_instance_valid(plank):
+			break
+	check(is_instance_valid(plank), "a ball rolling over it does not break it")
+	GameManager.return_to_edit()
+
+	# --- dropped onto from height: must break ---
+	LevelLayout.clear(container)
+	var target: PlaceableObject = load("res://entities/props/madera/madera.tscn").instantiate()
+	container.add_child(target)
+	level.ball_spawn.global_position = Vector2(700, 200)
+	target.global_position = Vector2(700, 700)
+
+	var before: int = SaveManager.get_material_count("wood_chips")
+	GameManager.start_attempt()
+	for i in range(120):
+		await get_tree().physics_frame
+		if not is_instance_valid(target):
+			break
+	check(not is_instance_valid(target), "a ball dropped onto it breaks it (ball ended at %s)" % [
+		level.get_ball().global_position if level.get_ball() != null else Vector2.ZERO
+	])
+	check(
+		SaveManager.get_material_count("wood_chips") > before,
+		"and that credits materials (%d -> %d)" % [before, SaveManager.get_material_count("wood_chips")]
+	)
+
+	GameManager.return_to_edit()
+	level.ball_spawn.position = spawn
+	LevelLayout.clear(container)
+
+
+## The bomb detonates ON CONTACT. It used to wait, because a design-time fuse value
+## was being persisted into the layout save and restored over the scene's value.
+func _test_bomb_is_instant() -> void:
+	print("\n[bomb is instant]")
+	var scene: PackedScene = load("res://entities/props/bomb/bomb.tscn")
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+
+	var bomb: Explosive = scene.instantiate()
+	container.add_child(bomb)
+	check(is_zero_approx(bomb.fuse_seconds), "the bomb's fuse is zero (%.2fs)" % bomb.fuse_seconds)
+
+	# Nothing design-time may ride along in the save, or later retuning is overridden.
+	var state: Dictionary = bomb.get_save_state()
+	check(not state.has("fuse_seconds"), "the fuse is NOT persisted into the layout save")
+
+	# A stale save must no longer be able to reintroduce it.
+	bomb.apply_save_state({"fuse_seconds": 5.0})
+	check(is_zero_approx(bomb.fuse_seconds), "an old save file cannot override the scene's fuse")
+	LevelLayout.clear(container)
 
 
 # ---------------------------------------------------------------- helpers ----

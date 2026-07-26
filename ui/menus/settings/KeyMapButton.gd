@@ -109,7 +109,32 @@ func _refresh_label() -> void:
 ## method and calling it from a static function doesn't compile.
 static func event_display_name(event: InputEvent) -> String:
 	if event is InputEventKey:
-		return event.as_text_key_label()
+		return key_display_name(event)
 	if event is InputEventMouseButton:
 		return String(TranslationServer.translate("CONTROLS_MOUSE_BUTTON")) % event.button_index
 	return event.as_text()
+
+
+## Readable name for a key event, whichever way it was defined.
+##
+## The bindings in project.godot set `physical_keycode` only, leaving `keycode` and
+## `key_label` at 0 — and as_text_key_label() reads key_label, so it returned an
+## empty string and every control looked unbound. Physical codes have to be
+## translated through the active keyboard layout to get a name.
+static func key_display_name(event: InputEventKey) -> String:
+	if event.key_label != 0:
+		return OS.get_keycode_string(event.key_label)
+	if event.keycode != 0:
+		return OS.get_keycode_string(event.keycode)
+	if event.physical_keycode != 0:
+		# A physical code is already a Key naming the US-layout position, so it's a
+		# perfectly good answer on its own. The layout translation only matters on a
+		# non-QWERTY keyboard, and it is NOT supported by every display server — the
+		# headless one errors outright — so it's attempted, not relied on.
+		var mapped: Key = event.physical_keycode
+		if DisplayServer.get_name() != "headless":
+			var from_layout: Key = DisplayServer.keyboard_get_keycode_from_physical(event.physical_keycode)
+			if from_layout != 0:
+				mapped = from_layout
+		return OS.get_keycode_string(mapped)
+	return String(TranslationServer.translate("CONTROLS_UNBOUND"))

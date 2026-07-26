@@ -61,6 +61,16 @@ class_name PlaceableObject
 @export var debris_count: int = 6
 @export var debris_colour: Color = Color(0.55, 0.45, 0.36)
 
+## When a reactive prop's behaviour fires. Defined once here so every prop that
+## reacts to something — explosives, launchers, rockets — shares one vocabulary and
+## a level designer only has to learn it once.
+enum TriggerMode {
+	BALL_CONTACT, ## Only the ball sets it off. The usual choice.
+	ANY_CONTACT,  ## Any loose body does, including other props.
+	ON_PLAY,      ## Fires as soon as the attempt starts, after its own delay.
+	MANUAL,       ## Nothing sets it off but another prop — chain reactions only.
+}
+
 ## How far cursor resizing may take a prop. Uniform only — a non-uniform scale on
 ## a RigidBody2D hands the physics engine a shape it can't represent, and
 ## collisions stop matching what's drawn.
@@ -533,15 +543,17 @@ func _cancel_all_gestures() -> void:
 
 ## Subclasses overriding this must call super(state), or the prop stops breaking.
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	# Lets this prop break things IT slams into, as well as being broken.
+	super(state)
 	if not breakable or _broken or freeze:
 		# A frozen (anchored) prop reports no contacts, so it can only be broken by
-		# something calling try_break() directly — an explosion, typically.
+		# whatever hit it calling try_break() — the ball, or an explosion.
 		return
-	for i in state.get_contact_count():
-		var impulse: float = state.get_contact_impulse(i).length()
-		if impulse >= break_impulse:
-			try_break(impulse)
-			return
+	# `last_impact` is measured by SimulatedBody from the speed this body lost, which
+	# get_contact_impulse() fails to report during a collision. Requiring a contact
+	# too keeps a body braked by anything else from counting as a crash.
+	if state.get_contact_count() > 0 and last_impact >= break_impulse:
+		try_break(last_impact)
 
 
 ## Attempts to shatter the prop with `force`. Returns whether it actually broke, so

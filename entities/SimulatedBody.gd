@@ -44,6 +44,10 @@ func _apply_mode_now(mode: GameManager.Mode) -> void:
 		linear_velocity = Vector2.ZERO
 		angular_velocity = 0.0
 		sleeping = false
+		# Cleared with the velocity, or the speed it had when the attempt ended would
+		# read as a colossal impact on the first step of the next one.
+		_last_speed = 0.0
+		last_impact = 0.0
 	else:
 		freeze = false
 	_on_mode_applied(mode)
@@ -53,6 +57,47 @@ func _apply_mode_now(mode: GameManager.Mode) -> void:
 ## resetting an internal timer, restarting an animation.
 func _on_mode_applied(_mode: GameManager.Mode) -> void:
 	pass
+
+
+## How hard this body was hit on the most recent physics step, as mass × speed lost.
+## Read by PlaceableObject to decide whether it should shatter.
+var last_impact: float = 0.0
+
+var _last_speed: float = 0.0
+
+
+## Measures impacts and reports them to whatever was hit.
+##
+## This has to live on the MOVING body. An anchored prop is frozen, and a frozen
+## RigidBody2D reports no contacts at all — so a wood plank could never notice the
+## ball landing on it, and planks were unbreakable in practice. The ball (and any
+## loose prop) instead tells what it hits how hard, and the target decides whether
+## that was enough.
+##
+## Strength is derived from the SPEED LOST, not from get_contact_impulse(). The
+## impulse accessor reports zero throughout the actual collision in this setup and
+## only becomes non-zero once the body has settled — verified by dropping a ball on a
+## plank with the threshold at 0.001, which broke ~55 frames after the impact rather
+## than on it. Speed lost is exact and needs no solver cooperation.
+##
+## It also happens to be the right physical quantity: a ball ROLLING across a plank
+## keeps its speed, so it loses nothing and breaks nothing, while a ball DROPPING onto
+## one loses almost all of it at once. That distinction is the whole feature.
+##
+## Subclasses overriding _integrate_forces must call super(state).
+func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	var speed_now: float = state.linear_velocity.length()
+	# Gravity accelerates the body, so a falling body's speed only ever rises and
+	# can't register a false impact.
+	last_impact = maxf(0.0, _last_speed - speed_now) * mass
+	_last_speed = speed_now
+
+	if freeze or last_impact <= 0.0:
+		return
+	for i in state.get_contact_count():
+		var other: Object = state.get_contact_collider_object(i)
+		if other is PlaceableObject:
+			other.try_break(last_impact)
 
 
 ## Takes this body off the canvas immediately and frees it.

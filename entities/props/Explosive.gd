@@ -1,33 +1,51 @@
 extends PlaceableObject
 class_name Explosive
-# Anchored prop that detonates when the ball touches it, shoving everything loose
-# nearby away from the blast and shattering anything breakable in range.
+# Anything that goes bang. Shared by the bomb, the dynamite and the TNT crate, which
+# differ only in the numbers below — one script, three scenes.
 #
-# Shared by the bomb, the dynamite and the TNT crate — they differ only in exported
-# numbers, so there is one script and three scenes.
+# Every knob a designer needs is exported, so a new explosive is a new .tscn with
+# different values rather than new code:
 #
-# Detection is a child Area2D ("Trigger") rather than contact_monitor on the body
-# itself: anchored props are frozen, and a frozen RigidBody2D does not reliably
+#   trigger_mode    what sets it off (ball, anything, the start of the attempt, or
+#                   only a neighbouring blast)
+#   arm_delay       for ON_PLAY, how long after the attempt starts it triggers
+#   fuse_seconds    trigger -> bang. 0 detonates on contact.
+#   blast_radius    how far the blast reaches
+#   blast_force     how hard it throws loose bodies
+#   break_power     how strongly it counts toward SHATTERING things, separately from
+#                   how hard it throws them — a firecracker can shove without breaking
+#   chain_reaction  whether it lights other explosives in range
+#   shake_strength  how much the screen jolts
+#
+# Contact is detected with a child Area2D named "Trigger" rather than
+# contact_monitor: these are anchored, and a frozen RigidBody2D does not reliably
 # report its own contacts.
 #
-# The fuse counts down in _physics_process gated on PLAY, NOT with a SceneTree
-# timer. A tree timer would keep running while the player has the level paused, so
-# a bomb could go off in a supposedly frozen world.
+# The fuse counts down in _physics_process gated on PLAY, NOT with a SceneTree timer.
+# A tree timer would keep running while the player has the level paused, so a bomb
+# could go off in a supposedly frozen world.
+
+@export_group("Trigger")
+@export var trigger_mode: TriggerMode = TriggerMode.BALL_CONTACT
+## Only used by ON_PLAY. Gives the player a moment to see the level before it blows.
+@export var arm_delay: float = 0.4
+## Seconds from being triggered to detonating. 0 means on contact.
+@export var fuse_seconds: float = 0.35
 
 @export_group("Blast")
 @export var explosion_scene: PackedScene
 ## World units. Bodies inside this get pushed; the push falls off linearly.
 @export var blast_radius: float = 220.0
-## Impulse applied at the centre of the blast, in kg·px/s.
+## Impulse at the centre of the blast, in kg·px/s.
 @export var blast_force: float = 1400.0
-## Seconds between the ball touching it and the bang. 0 detonates instantly.
-@export var fuse_seconds: float = 0.35
-## Scales how strongly the blast counts toward breaking things, independently of how
-## hard it throws them — a firecracker can shove without shattering.
+## Multiplies the blast's breaking power without changing how hard it throws.
 @export var break_power: float = 1.0
+## Whether this blast sets off other explosives it reaches.
+@export var chain_reaction: bool = true
 @export var shake_strength: float = 12.0
 
 var _fuse_remaining: float = -1.0
+var _arm_remaining: float = -1.0
 var _spent: bool = false
 
 @onready var _trigger: Area2D = $Trigger
@@ -42,12 +60,20 @@ func _ready() -> void:
 func _on_trigger_body_entered(body: Node2D) -> void:
 	if _spent or not GameManager.is_play_mode():
 		return
-	if not body.is_in_group("ball"):
-		return
-	light_fuse()
+	match trigger_mode:
+		TriggerMode.BALL_CONTACT:
+			if body.is_in_group("ball"):
+				light_fuse()
+		TriggerMode.ANY_CONTACT:
+			# Static level geometry shouldn't count, or an explosive resting on the
+			# floor would trigger the instant play started.
+			if body is RigidBody2D:
+				light_fuse()
+		TriggerMode.ON_PLAY, TriggerMode.MANUAL:
+			pass
 
 
-## Also called by a neighbouring blast, so explosives chain.
+## Starts the fuse. Also called by a neighbouring blast, so explosives chain.
 func light_fuse() -> void:
 	if _spent or _fuse_remaining >= 0.0:
 		return
@@ -62,9 +88,18 @@ func _physics_process(delta: float) -> void:
 	# Gated on PLAY so a pause genuinely stops the fuse.
 	if not GameManager.is_play_mode():
 		return
-	_fuse_remaining -= delta
-	if _fuse_remaining <= 0.0:
-		explode()
+
+	if _arm_remaining >= 0.0:
+		_arm_remaining -= delta
+		if _arm_remaining <= 0.0:
+			_arm_remaining = -1.0
+			light_fuse()
+		return
+
+	if _fuse_remaining >= 0.0:
+		_fuse_remaining -= delta
+		if _fuse_remaining <= 0.0:
+			explode()
 
 
 func explode() -> void:
@@ -93,6 +128,9 @@ func _spawn_effect(at: Vector2) -> void:
 	host.add_child(effect)
 	if effect is Node2D:
 		effect.global_position = at
+		# Scale the stock burst to roughly match the blast it represents.
+		var visual_scale: float = clampf(blast_radius / 220.0, 0.5, 3.0)
+		effect.scale *= visual_scale
 
 
 func _apply_blast(epicentre: Vector2) -> void:
@@ -126,8 +164,7 @@ func _apply_blast(epicentre: Vector2) -> void:
 		# it at all — frozen bodies refuse impulses.
 		if target is PlaceableObject and target.try_break(force * break_power):
 			continue
-		# Chain reaction: a blast lights any other explosive it reaches.
-		if target is Explosive:
+		if chain_reaction and target is Explosive:
 			target.light_fuse()
 		if target.freeze:
 			continue
@@ -140,13 +177,22 @@ func _on_mode_applied(mode: GameManager.Mode) -> void:
 		# Returning to EDIT rebuilds every prop from the snapshot, so a fresh one is
 		# normally what arrives here — reset anyway for the case where it isn't.
 		_fuse_remaining = -1.0
+		_arm_remaining = -1.0
 		_spent = false
 		set_physics_process(false)
+	elif mode == GameManager.Mode.PLAY and trigger_mode == TriggerMode.ON_PLAY and not _spent:
+		# Arm now; the countdown itself runs in _physics_process so a pause holds it.
+		_arm_remaining = maxf(arm_delay, 0.001)
+		set_physics_process(true)
 
 
-func get_save_state() -> Dictionary:
-	return {"fuse_seconds": fuse_seconds}
-
-
-func apply_save_state(state: Dictionary) -> void:
-	fuse_seconds = float(state.get("fuse_seconds", fuse_seconds))
+# NOTHING is saved here on purpose, and that's a correction rather than an omission.
+#
+# fuse_seconds used to be written into the layout save and restored on load. It is a
+# DESIGN-TIME value authored per scene, not something the player edits — so once a
+# level had been saved, its props carried the old fuse forever and every later
+# balance change was silently overridden by the save file. That is why the bomb still
+# waited ~0.35s after being retuned to detonate on contact.
+#
+# Only persist state the PLAYER can change. Transform already rides along in
+# LevelLayout; anything a designer sets belongs solely to the .tscn.

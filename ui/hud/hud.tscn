@@ -115,11 +115,6 @@ layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="ResumeButton" type="Button" parent="Root/ResultPanel/VBox/Buttons"]
-custom_minimum_size = Vector2(150, 56)
-layout_mode = 2
-text = "HUD_RESUME"
-
 [node name="EditButton" type="Button" parent="Root/ResultPanel/VBox/Buttons"]
 custom_minimum_size = Vector2(150, 56)
 layout_mode = 2
@@ -134,3 +129,41 @@ text = "HUD_NEXT_LEVEL"
 custom_minimum_size = Vector2(150, 56)
 layout_mode = 2
 text = "HUD_LEVELS"
+
+[node name="PauseOverlay" type="ColorRect" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.13, 0.11, 0.09, 0.55)
+
+[node name="Center" type="CenterContainer" parent="Root/PauseOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Buttons" type="HBoxContainer" parent="Root/PauseOverlay/Center"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="PauseBackButton" type="Button" parent="Root/PauseOverlay/Center/Buttons"]
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+text = "HUD_BACK"
+
+[node name="PauseEditButton" type="Button" parent="Root/PauseOverlay/Center/Buttons"]
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+text = "HUD_EDIT"
+
+[node name="PauseResumeButton" type="Button" parent="Root/PauseOverlay/Center/Buttons"]
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+text = "HUD_RESUME"

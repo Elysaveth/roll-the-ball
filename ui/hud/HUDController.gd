@@ -29,10 +29,17 @@ enum PropAction { ROTATE, RESIZE, DELETE }
 @onready var result_title: Label = $Root/ResultPanel/VBox/ResultTitle
 @onready var result_detail: Label = $Root/ResultPanel/VBox/ResultDetail
 @onready var leaderboard: PanelContainer = $Root/ResultPanel/VBox/Leaderboard
-@onready var resume_button: Button = $Root/ResultPanel/VBox/Buttons/ResumeButton
 @onready var edit_button: Button = $Root/ResultPanel/VBox/Buttons/EditButton
 @onready var next_button: Button = $Root/ResultPanel/VBox/Buttons/NextButton
 @onready var select_button: Button = $Root/ResultPanel/VBox/Buttons/SelectButton
+
+## Pausing dims the whole screen instead of opening a panel — the point of pausing is
+## to LOOK at the level, so anything that covers it is working against the player.
+## Only the three ways out sit on top of the dimmer.
+@onready var pause_overlay: ColorRect = $Root/PauseOverlay
+@onready var pause_back_button: Button = $Root/PauseOverlay/Center/Buttons/PauseBackButton
+@onready var pause_edit_button: Button = $Root/PauseOverlay/Center/Buttons/PauseEditButton
+@onready var pause_resume_button: Button = $Root/PauseOverlay/Center/Buttons/PauseResumeButton
 
 ## Which prop the open context menu belongs to.
 var _menu_target: PlaceableObject = null
@@ -42,8 +49,10 @@ func _ready() -> void:
 	back_button.pressed.connect(GameManager.return_to_level_select)
 	play_button.pressed.connect(GameManager.toggle_play)
 	pause_button.pressed.connect(GameManager.toggle_pause)
-	resume_button.pressed.connect(GameManager.resume)
 	edit_button.pressed.connect(GameManager.return_to_edit)
+	pause_back_button.pressed.connect(GameManager.return_to_level_select)
+	pause_edit_button.pressed.connect(GameManager.return_to_edit)
+	pause_resume_button.pressed.connect(GameManager.resume)
 	select_button.pressed.connect(GameManager.return_to_level_select)
 	next_button.pressed.connect(_on_next_pressed)
 
@@ -58,6 +67,7 @@ func _ready() -> void:
 	prop_menu.id_pressed.connect(_on_prop_menu_id_pressed)
 
 	result_panel.hide()
+	pause_overlay.hide()
 	# A level may already be loaded by the time the HUD is ready, depending on
 	# which _ready runs first, so don't wait for the signal to catch up.
 	if GameManager.get_current_level() != null:
@@ -240,8 +250,10 @@ func _refresh_controls() -> void:
 	# Props are only draggable in EDIT, so offering the palette elsewhere lies.
 	palette_items.get_parent().visible = mode == GameManager.Mode.EDIT
 
+	# Paused is the dimmer, not a panel.
+	pause_overlay.visible = mode == GameManager.Mode.PAUSED
 	if mode == GameManager.Mode.PAUSED:
-		_show_panel(tr("RESULT_PAUSED"), "", true, true, false)
+		result_panel.hide()
 	elif mode == GameManager.Mode.EDIT or mode == GameManager.Mode.PLAY:
 		result_panel.hide()
 
@@ -273,7 +285,7 @@ func _on_goal_reached(level_id: int, attempt_time: float, bank_delta: float) -> 
 
 	_show_panel(
 		tr("RESULT_COMPLETED"), "\n".join(lines),
-		false, true, GameManager.level_exists(level_id + 1)
+		true, GameManager.level_exists(level_id + 1)
 	)
 	# The whole point of landing the ball: see where it puts you against everyone
 	# else on this level.
@@ -287,14 +299,13 @@ func _on_goal_reached(level_id: int, attempt_time: float, bank_delta: float) -> 
 
 
 func _on_time_ran_out(_level_id: int) -> void:
-	_show_panel(tr("RESULT_TIME_UP"), tr("RESULT_TIME_UP_DETAIL"), false, true, false)
+	_show_panel(tr("RESULT_TIME_UP"), tr("RESULT_TIME_UP_DETAIL"), true, false)
 
 
-func _show_panel(title: String, detail: String, show_resume: bool, show_edit: bool, show_next: bool) -> void:
+func _show_panel(title: String, detail: String, show_edit: bool, show_next: bool) -> void:
 	result_title.text = title
 	result_detail.text = detail
 	result_detail.visible = not detail.is_empty()
-	resume_button.visible = show_resume
 	edit_button.visible = show_edit
 	next_button.visible = show_next
 	# Only a completed level has a board worth showing; _on_goal_reached reveals it.

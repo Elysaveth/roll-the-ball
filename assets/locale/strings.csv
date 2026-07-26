@@ -2,13 +2,13 @@ keys,en,es
 APP_TITLE,Roll the ball,Roll the ball
 MENU_NAME_PROMPT,Enter your name for the leaderboards,Escribe tu nombre para las tablas de puntuaciones
 MENU_NAME_PLACEHOLDER,Your name,Tu nombre
-MENU_NAME_REQUIRED,A name is required to play.,Hace falta un nombre para poder jugar.
+MENU_NAME_REQUIRED,A name is required to play.,Hace falta un nombre para jugar.
 MENU_PLAY,Play,Jugar
 MENU_QUIT,Quit,Salir
-SELECT_TITLE,Select level,Selecciona nivel
+SELECT_TITLE,Select level,Seleccionar nivel
 SELECT_BACK,Main menu,Menú principal
 SELECT_LEADERBOARD,Leaderboards,Puntuaciones
-SELECT_BANK,%s  ·  Time bank: %s of %s,%s  ·  Banco de tiempo: %s de %s
+SELECT_BANK,%s  ·  Time left: %s of %s,%s  ·  Tiempo restante: %s de %s
 SELECT_LOCKED,Locked,Bloqueado
 SELECT_NOT_COMPLETED,Not completed,Sin completar
 SELECT_RECORD,Record: %s — beat it to win seconds back,Récord: %s — mejóralo para recuperar segundos
@@ -19,17 +19,17 @@ HUD_PAUSE,Pause,Pausa
 HUD_RESUME,Resume,Reanudar
 HUD_NEXT_LEVEL,Next level,Siguiente nivel
 HUD_LEVELS,Levels,Niveles
-HUD_NO_RECORD,No record  ·  Bank %s,Sin récord  ·  Banco %s
-HUD_RECORD,Record %s  ·  Bank %s,Récord %s  ·  Banco %s
+HUD_NO_RECORD,No record  ·  Left: %s,Sin récord  ·  Restante: %s
+HUD_RECORD,Record %s  ·  Left: %s,Récord %s  ·  Restante %s
 RESULT_COMPLETED,In the basket!,¡A la cesta!
 RESULT_TIME_UP,Out of time,Se acabó el tiempo
 RESULT_PAUSED,Paused,En pausa
 RESULT_TIME,Time: %s,Tiempo: %s
-RESULT_REFUND,You won back %s for the bank.,Has recuperado %s para el banco.
-RESULT_SPENT,You spent %s from the bank.,Has gastado %s del banco.
-RESULT_NO_IMPROVEMENT,No improvement on your record: the bank is unchanged.,No has mejorado tu récord: el banco no cambia.
-RESULT_BANK_LEFT,Bank remaining: %s,Banco restante: %s
-RESULT_TIME_UP_DETAIL,The bank is empty. Look at how the level ended and then go back to editing.,El banco está a cero. Observa cómo ha quedado el nivel y vuelve a editarlo.
+RESULT_REFUND,You won back %s.,Has recuperado %s.
+RESULT_SPENT,You spent %s.,Has gastado %s.
+RESULT_NO_IMPROVEMENT,No improvement: remaining time unchanged.,No has mejorado: tiempo restante sin cambios.
+RESULT_BANK_LEFT,Tiempo remaining: %s,Tiempo restante: %s
+RESULT_TIME_UP_DETAIL,TIME'S UP! You need to do better...,TIEMPO! Tendrás que hacerlo mejor...
 PROP_ROTATE,Rotate,Rotar
 PROP_RESIZE,Resize,Redimensionar
 PROP_DELETE,Delete,Eliminar
@@ -42,12 +42,12 @@ LB_GENERAL_TITLE,Furthest level reached,Nivel más lejano alcanzado
 LB_LEVEL_VALUE,Level %d,Nivel %d
 LB_CLOSE,Close,Cerrar
 SETTINGS_TITLE,Settings,Ajustes
-SETTINGS_LANGUAGE_EN,English,English
+SETTINGS_LANGUAGE_EN,English,Inglés
 SETTINGS_LANGUAGE_ES,Spanish,Español
 SETTINGS_FPS_UNCAPPED,Uncapped,Sin límite
 CONTROLS_UNBOUND,Unbound,Sin asignar
 CONTROLS_MOUSE_BUTTON,Mouse button %d,Botón de ratón %d
-CONTROLS_RESET,Restore defaults,Restaurar por defecto
+CONTROLS_RESET,Restore defaults,Restaurar valores por defecto
 CONTROLS_NONE,No rebindable actions found.,No hay acciones reasignables.
 ACTION_TOGGLE_PLAY,Play / edit,Jugar / editar
 ACTION_TOGGLE_PAUSE,Pause / cancel,Pausa / cancelar
@@ -72,12 +72,13 @@ SETTINGS_SCREEN_SHAKE,Screen shake,Vibración de pantalla
 SETTINGS_MOTION_BLUR,Motion blur,Desenfoque de movimiento
 SETTINGS_LANGUAGE,Language,Idioma
 SETTINGS_TEXT_SIZE,Text size,Tamaño del texto
-SETTINGS_COLORBLIND,Colourblind mode,Modo daltónico
+SETTINGS_COLORBLIND,Colorblind mode,Modo daltónico
 SETTINGS_CLOSED_CAPTIONS,Closed captions,Subtítulos
 SETTINGS_TAB_DEBUG,"Debug","Depuracion"
 SETTINGS_DEBUG_UNLOCK_ALL,"Unlock all levels and props","Desbloquear todos los niveles y objetos"
-SETTINGS_DEBUG_NOTE,"For testing and building content. Progress is still saved normally.","Para pruebas y creacion de contenido. El progreso se guarda igualmente."
+SETTINGS_DEBUG_NOTE,"For testing and building content. Progress is still saved.","Para pruebas y creacion de contenido. El progreso normal se mantiene."
 SETTINGS_COLORBLIND_OFF,"Off","Desactivado"
 SETTINGS_COLORBLIND_PROTANOPIA,"Protanopia (red-blind)","Protanopia (sin rojo)"
 SETTINGS_COLORBLIND_DEUTERANOPIA,"Deuteranopia (green-blind)","Deuteranopia (sin verde)"
 SETTINGS_COLORBLIND_TRITANOPIA,"Tritanopia (blue-blind)","Tritanopia (sin azul)"
+SETTINGS_TAB_LANGUAGE,Language,Idioma

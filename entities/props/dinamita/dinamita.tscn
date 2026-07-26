@@ -22,9 +22,12 @@ object_name = "Dynamite"
 explosion_scene = ExtResource("3_boom")
 blast_radius = 300.0
 blast_force = 2100.0
-fuse_seconds = 0.8
-break_power = 1.3
+fuse_seconds = 1.0
+break_power = 1.6
 shake_strength = 18.0
+trigger_mode = 0
+arm_delay = 0.4
+chain_reaction = true
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.32, 0.32)

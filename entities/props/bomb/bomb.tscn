@@ -20,11 +20,14 @@ script = ExtResource("1_bomb")
 prop_id = "bomb"
 object_name = "Bomba"
 explosion_scene = ExtResource("3_explosion")
-blast_radius = 220.0
-blast_force = 1400.0
-fuse_seconds = 0.35
-break_power = 1.0
-shake_strength = 12.0
+blast_radius = 200.0
+blast_force = 1300.0
+fuse_seconds = 0.0
+break_power = 0.8
+shake_strength = 10.0
+trigger_mode = 0
+arm_delay = 0.4
+chain_reaction = true
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.3, 0.3)

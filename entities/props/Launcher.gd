@@ -9,6 +9,9 @@ class_name Launcher
 # reliably report its own contacts.
 
 @export_group("Launch")
+## What the launcher reacts to. BALL_CONTACT is a cannon aimed at the ball;
+## ANY_CONTACT is a spring pad that throws whatever lands on it.
+@export var trigger_mode: TriggerMode = TriggerMode.BALL_CONTACT
 ## Impulse applied to whatever enters the trigger, in kg·px/s.
 @export var launch_impulse: float = 1600.0
 ## Direction of the kick in the prop's LOCAL space, so rotating the prop aims it.
@@ -16,9 +19,6 @@ class_name Launcher
 @export var launch_direction: Vector2 = Vector2.UP
 ## Stops a body resting in the trigger from being kicked every single frame.
 @export var cooldown_seconds: float = 0.3
-## Only bodies in this group get launched. Empty launches anything loose, which is
-## what a spring should do; a cannon aimed only at the ball sets "ball".
-@export var launch_group: String = ""
 ## Optional AnimatedSprite2D child animation to play on firing.
 @export var fire_animation: StringName = &""
 
@@ -38,11 +38,18 @@ func _on_trigger_body_entered(body: Node2D) -> void:
 		return
 	if not body is RigidBody2D:
 		return
-	if not launch_group.is_empty() and not body.is_in_group(launch_group):
-		return
-	# A frozen body is scenery as far as the physics engine is concerned.
+	# A frozen body is scenery as far as the physics engine is concerned — there is
+	# nothing to launch.
 	if body.freeze:
 		return
+	match trigger_mode:
+		TriggerMode.BALL_CONTACT:
+			if not body.is_in_group("ball"):
+				return
+		TriggerMode.ON_PLAY, TriggerMode.MANUAL:
+			return # a launcher with no contact trigger only fires via launch()
+		TriggerMode.ANY_CONTACT:
+			pass
 	launch(body)
 
 

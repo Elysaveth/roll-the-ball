@@ -38,6 +38,8 @@ const CHECK_OFF_PATH: String = "res://assets/themes/check_off.png"
 const TOGGLE_ON_PATH: String = "res://assets/themes/toggle_on.png"
 const TOGGLE_OFF_PATH: String = "res://assets/themes/toggle_off.png"
 const ARROW_PATH: String = "res://assets/themes/arrow_down.png"
+const ARROW_LEFT_PATH: String = "res://assets/themes/arrow_left.png"
+const ARROW_RIGHT_PATH: String = "res://assets/themes/arrow_right.png"
 
 # -- Palette ------------------------------------------------------------------
 const PAPER_LIGHT := Color("f4eee2") # brightest paper — panels, button faces
@@ -68,7 +70,8 @@ const RIM_TONE := Color(0.30, 0.28, 0.26, 1.0)
 func _initialize() -> void:
 	var missing: Array[String] = []
 	for path in [TEXTURE_PATH, GRABBER_PATH, CHECK_ON_PATH, CHECK_OFF_PATH,
-			TOGGLE_ON_PATH, TOGGLE_OFF_PATH, ARROW_PATH]:
+			TOGGLE_ON_PATH, TOGGLE_OFF_PATH, ARROW_PATH,
+			ARROW_LEFT_PATH, ARROW_RIGHT_PATH]:
 		if not ResourceLoader.exists(path):
 			missing.append(path)
 
@@ -116,6 +119,8 @@ func _write_icons() -> void:
 	_save(_make_toggle(56, 28, false), TOGGLE_OFF_PATH)
 	_save(_make_toggle(56, 28, true), TOGGLE_ON_PATH)
 	_save(_make_arrow(24), ARROW_PATH)
+	_save(_make_side_arrow(24, false), ARROW_LEFT_PATH)
+	_save(_make_side_arrow(24, true), ARROW_RIGHT_PATH)
 
 
 func _save(image: Image, path: String) -> void:
@@ -200,6 +205,21 @@ func _make_arrow(size: int) -> Image:
 	return image
 
 
+## Left/right chevrons for the tab strip, which grows scroll arrows once the tabs
+## overflow. Left unthemed these are stock Godot grey and stand out badly.
+func _make_side_arrow(size: int, pointing_right: bool) -> Image:
+	var image: Image = _blank(size, size)
+	var columns: int = size / 2
+	for column in columns:
+		var span: int = columns - column
+		var centre: int = size / 2
+		var x: int = (size / 4) + column if pointing_right else (size - 1) - (size / 4) - column
+		for y in range(centre - span, centre + span):
+			if y >= 0 and y < size and x >= 0 and x < size:
+				image.set_pixel(x, y, INK)
+	return image
+
+
 ## Thick line between two points, for the tick mark.
 func _stroke(image: Image, from: Vector2, to: Vector2, thickness: int, colour: Color) -> void:
 	var steps: int = int(from.distance_to(to)) * 2
@@ -244,7 +264,7 @@ func _write_theme() -> void:
 	_style_tabs(theme, texture)
 	_style_slider(theme)
 	_style_scrollbars(theme)
-	_style_toggles(theme, texture)
+	_style_toggles(theme)
 	_style_option_button_icons(theme)
 
 	var error: int = ResourceSaver.save(theme, THEME_PATH)
@@ -337,28 +357,58 @@ func _style_tabs(theme: Theme, texture: Texture2D) -> void:
 	theme.set_color("font_unselected_color", "TabContainer", Color(PAPER_LIGHT, 0.85))
 	theme.set_color("font_hovered_color", "TabContainer", INK)
 
+	# Tab titles deliberately do NOT get a fixed font size, so they follow
+	# default_font_size like everything else. Text scaling is an accessibility
+	# feature: it has to affect ALL text, and a tab strip that overflows at large
+	# sizes is the accepted cost — the strip scrolls, and its arrows are themed below.
+
+	# Once the tabs do overflow, the strip grows scroll arrows. Unthemed they are
+	# stock Godot grey.
+	var left: Texture2D = load(ARROW_LEFT_PATH)
+	var right: Texture2D = load(ARROW_RIGHT_PATH)
+	for type_name in ["TabContainer", "TabBar"]:
+		theme.set_icon("decrement", type_name, left)
+		theme.set_icon("increment", type_name, right)
+		theme.set_icon("decrement_highlight", type_name, left)
+		theme.set_icon("increment_highlight", type_name, right)
+
 
 func _style_slider(theme: Theme) -> void:
 	var grabber: Texture2D = load(GRABBER_PATH)
 	for type_name in ["HSlider", "VSlider"]:
-		# Sliders are thin; torn edges at that scale read as noise, so the track
-		# and fill stay flat.
-		theme.set_stylebox("slider", type_name, _flat(Color(INK_SOFT, 0.30), 4))
-		theme.set_stylebox("grabber_area", type_name, _flat(ACCENT, 4))
-		theme.set_stylebox("grabber_area_highlight", type_name, _flat(ACCENT.lightened(0.15), 4))
+		# Sliders are thin; torn edges at that scale read as noise, so the track and
+		# fill stay flat.
+		#
+		# The track height comes from the stylebox's MINIMUM size, and a StyleBoxFlat
+		# with no margins has none — which is why the line was invisible. Content
+		# margins give it real thickness, and the tone is solid rather than a faint
+		# tint so it reads against light paper.
+		var track: StyleBoxFlat = _flat(Color(INK_SOFT, 0.75), 4)
+		track.content_margin_top = 5.0
+		track.content_margin_bottom = 5.0
+		theme.set_stylebox("slider", type_name, track)
+
+		var fill: StyleBoxFlat = _flat(ACCENT, 4)
+		fill.content_margin_top = 5.0
+		fill.content_margin_bottom = 5.0
+		theme.set_stylebox("grabber_area", type_name, fill)
+
+		var fill_hot: StyleBoxFlat = _flat(ACCENT.lightened(0.15), 4)
+		fill_hot.content_margin_top = 5.0
+		fill_hot.content_margin_bottom = 5.0
+		theme.set_stylebox("grabber_area_highlight", type_name, fill_hot)
+
 		# The handle is an ICON, not a stylebox — leaving it undefined is what made
 		# the sliders look like stock Godot next to everything else.
 		theme.set_icon("grabber", type_name, grabber)
 		theme.set_icon("grabber_highlight", type_name, grabber)
 		theme.set_icon("grabber_disabled", type_name, grabber)
 		theme.set_constant("center_grabber", type_name, 1)
-	# Without a minimum, a themed track collapses to a hairline.
-	theme.set_constant("grabber_offset", "HSlider", 0)
 
 
 ## CheckButton and CheckBox are icon-driven too. Same story as the slider handle:
 ## anything not defined here comes from Godot's built-in theme and looks foreign.
-func _style_toggles(theme: Theme, texture: Texture2D) -> void:
+func _style_toggles(theme: Theme) -> void:
 	var toggle_on: Texture2D = load(TOGGLE_ON_PATH)
 	var toggle_off: Texture2D = load(TOGGLE_OFF_PATH)
 	var check_on: Texture2D = load(CHECK_ON_PATH)
@@ -378,14 +428,12 @@ func _style_toggles(theme: Theme, texture: Texture2D) -> void:
 		theme.set_icon("radio_checked_disabled", type_name, on)
 		theme.set_icon("radio_unchecked_disabled", type_name, off)
 
-		# Toggles sit on the panel rather than in their own card, so only the
-		# hover/pressed states get a box — a permanent frame around every checkbox
-		# row would be noise.
-		theme.set_stylebox("normal", type_name, _flat(Color(0, 0, 0, 0)))
-		theme.set_stylebox("hover", type_name, _box(texture, PAPER_EDGE, 8))
-		theme.set_stylebox("pressed", type_name, _box(texture, SEPIA, 8))
-		theme.set_stylebox("disabled", type_name, _flat(Color(0, 0, 0, 0)))
-		theme.set_stylebox("focus", type_name, _flat(Color(0, 0, 0, 0)))
+		# No torn frame on toggles in ANY state. The switch artwork already carries
+		# the styling, and wrapping a jagged outline around it looked wrong — the
+		# frame belongs to things that are cards (buttons, panels), not to a row of
+		# checkboxes sitting directly on the paper.
+		for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+			theme.set_stylebox(state, type_name, _flat(Color(0, 0, 0, 0)))
 		theme.set_color("font_color", type_name, INK)
 		theme.set_color("font_hover_color", type_name, INK)
 		theme.set_color("font_pressed_color", type_name, INK)
@@ -400,7 +448,12 @@ func _style_option_button_icons(theme: Theme) -> void:
 
 
 func _style_scrollbars(theme: Theme) -> void:
+	var left: Texture2D = load(ARROW_LEFT_PATH)
+	var right: Texture2D = load(ARROW_RIGHT_PATH)
+	var down: Texture2D = load(ARROW_PATH)
 	for type_name in ["VScrollBar", "HScrollBar"]:
+		theme.set_icon("decrement", type_name, left if type_name == "HScrollBar" else down)
+		theme.set_icon("increment", type_name, right if type_name == "HScrollBar" else down)
 		theme.set_stylebox("scroll", type_name, _flat(Color(INK_SOFT, 0.18), 3))
 		theme.set_stylebox("grabber", type_name, _flat(Color(INK_SOFT, 0.55), 3))
 		theme.set_stylebox("grabber_highlight", type_name, _flat(Color(INK, 0.7), 3))
