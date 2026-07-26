@@ -1,12 +1,12 @@
-[gd_resource type="Theme" format=3]
+[gd_resource type="Theme" format=3 uid="uid://cr2p2toegihrr"]
 
-[ext_resource type="Texture2D" path="res://assets/themes/jagged_panel.png" id="1_3f3va"]
-[ext_resource type="Texture2D" path="res://assets/themes/check_on.png" id="2_0f6i3"]
-[ext_resource type="Texture2D" path="res://assets/themes/check_off.png" id="3_y0ixg"]
-[ext_resource type="Texture2D" path="res://assets/themes/toggle_on.png" id="4_etupa"]
-[ext_resource type="Texture2D" path="res://assets/themes/toggle_off.png" id="5_luy55"]
-[ext_resource type="Texture2D" path="res://assets/themes/grabber.png" id="6_n0pxi"]
-[ext_resource type="Texture2D" path="res://assets/themes/arrow_down.png" id="7_nb43s"]
+[ext_resource type="Texture2D" uid="uid://dduc1t8gvhc4y" path="res://assets/themes/jagged_panel.png" id="1_3f3va"]
+[ext_resource type="Texture2D" uid="uid://d0lnfae8apjuf" path="res://assets/themes/check_on.png" id="2_0f6i3"]
+[ext_resource type="Texture2D" uid="uid://dy0ybk0hkrvl6" path="res://assets/themes/check_off.png" id="3_y0ixg"]
+[ext_resource type="Texture2D" uid="uid://dpme3a1xh3vw4" path="res://assets/themes/toggle_on.png" id="4_etupa"]
+[ext_resource type="Texture2D" uid="uid://x4e88d6xfhbo" path="res://assets/themes/toggle_off.png" id="5_luy55"]
+[ext_resource type="Texture2D" uid="uid://cahciastswhu0" path="res://assets/themes/grabber.png" id="6_n0pxi"]
+[ext_resource type="Texture2D" uid="uid://d1dkuebf1lv3r" path="res://assets/themes/arrow_down.png" id="7_nb43s"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_81epl"]
 content_margin_left = 12.0

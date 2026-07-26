@@ -93,7 +93,6 @@ scale_prop={
 [internationalization]
 
 locale/translations=PackedStringArray("res://assets/locale/strings.en.translation", "res://assets/locale/strings.es.translation")
-locale/fallback="en"
 
 [physics]
 

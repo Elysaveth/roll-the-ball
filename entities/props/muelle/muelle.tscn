@@ -1,15 +1,26 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://kxrtv51l20l2"]
 
-[ext_resource type="Script" path="res://entities/props/Launcher.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://entities/props/muelle/muelle_close/muelle_close.png" id="2_tex"]
-
-[sub_resource type="AtlasTexture" id="Atlas_main"]
-atlas = ExtResource("2_tex")
-region = Rect2(95, 65, 69, 149)
+[ext_resource type="Script" uid="uid://ceyn04vhd0f2j" path="res://entities/props/Launcher.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://d2hesdivffhyc" path="res://entities/props/muelle/muelle_open/muelle_open.png" id="2_g0yov"]
+[ext_resource type="Texture2D" uid="uid://bw0kwe00xj6m2" path="res://entities/props/muelle/muelle_close/muelle_close.png" id="2_tex"]
 
 [sub_resource type="PhysicsMaterial" id="Mat_main"]
 friction = 0.3
 bounce = 0.6
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_kevtd"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_g0yov")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_tex")
+}],
+"loop": 1,
+"name": &"default",
+"speed": 5.0
+}]
 
 [sub_resource type="RectangleShape2D" id="Shape_body"]
 size = Vector2(40, 70)
@@ -17,24 +28,25 @@ size = Vector2(40, 70)
 [sub_resource type="RectangleShape2D" id="Shape_trigger"]
 size = Vector2(56, 28)
 
-[node name="Muelle" type="RigidBody2D"]
-script = ExtResource("1_script")
+[node name="Muelle" type="RigidBody2D" unique_id=150634627]
 mass = 15.0
+physics_material_override = SubResource("Mat_main")
+script = ExtResource("1_script")
+launch_impulse = 1250.0
+cooldown_seconds = 0.2
 prop_id = "muelle"
 object_name = "Spring"
-launch_impulse = 1250.0
-launch_direction = Vector2(0, -1)
-cooldown_seconds = 0.2
-physics_material_override = SubResource("Mat_main")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.55, 0.55)
-texture = SubResource("Atlas_main")
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1030600921]
+scale = Vector2(0.5884591, 0.32853732)
+sprite_frames = SubResource("SpriteFrames_kevtd")
+frame = 1
+frame_progress = 0.8076557
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=639953939]
 shape = SubResource("Shape_body")
 
-[node name="Trigger" type="Area2D" parent="."]
+[node name="Trigger" type="Area2D" parent="." unique_id=2104379845]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger" unique_id=2055040511]
 shape = SubResource("Shape_trigger")
