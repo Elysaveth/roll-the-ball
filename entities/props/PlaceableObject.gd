@@ -550,10 +550,11 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		# whatever hit it calling try_break() — the ball, or an explosion.
 		return
 	# `last_impact` is measured by SimulatedBody from the speed this body lost, which
-	# get_contact_impulse() fails to report during a collision. Requiring a contact
-	# too keeps a body braked by anything else from counting as a crash.
-	if state.get_contact_count() > 0 and last_impact >= break_impulse:
-		try_break(last_impact)
+	# get_contact_impulse() fails to report during a collision. Requiring a recent
+	# contact keeps a body braked by anything else — a portal, a launcher — from
+	# counting as a crash, while still allowing for having already bounced clear.
+	if state.get_contact_count() > 0 and get_effective_impact() >= break_impulse:
+		try_break(get_effective_impact())
 
 
 ## Attempts to shatter the prop with `force`. Returns whether it actually broke, so

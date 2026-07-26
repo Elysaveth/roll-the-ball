@@ -211,8 +211,16 @@ func _refresh() -> void:
 
 
 func _start() -> void:
+	# Switches the active save. A different name is a different player with its own
+	# progress, so this may load an entirely different profile — see SaveManager.
 	SaveManager.set_player_name(name_field.text)
-	GameManager.go_to_level_select()
+	if SaveManager.has_progress():
+		GameManager.go_to_level_select()
+	else:
+		# A player with nothing behind them goes straight into level 1, where Joe's
+		# introduction is waiting. A level select showing one unlocked tile teaches
+		# them nothing.
+		GameManager.load_level(1)
 
 
 func _on_quit_pressed() -> void:

@@ -32,8 +32,10 @@ size = Vector2(56, 28)
 mass = 15.0
 physics_material_override = SubResource("Mat_main")
 script = ExtResource("1_script")
+trigger_mode = 1
 launch_impulse = 1250.0
 cooldown_seconds = 0.2
+fire_animation = &"default"
 prop_id = "muelle"
 object_name = "Spring"
 

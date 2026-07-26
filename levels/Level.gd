@@ -55,3 +55,27 @@ func reset_level() -> void:
 ## For the camera to follow, or a HUD to point an off-screen indicator at.
 func get_ball() -> Ball:
 	return _ball if _ball != null and is_instance_valid(_ball) else null
+
+
+## Removes the ball without putting a new one out. The tutorial uses this to hold the
+## level empty until Joe gets round to mentioning the ball.
+func despawn_ball() -> void:
+	if _ball != null and is_instance_valid(_ball):
+		remove_child(_ball)
+		_ball.queue_free()
+	_ball = null
+
+
+## Shows or hides part of the level by node path, for the tutorial's staged reveal.
+##
+## Visibility only — collision is left alone. That's safe because staging happens
+## entirely in EDIT with no ball in play, so there is nothing for an unrevealed
+## platform to collide with. Anything that revealed geometry mid-simulation would need
+## to move the shapes off their layer as well.
+func set_part_visible(path: String, visible_now: bool) -> void:
+	var part: Node = get_node_or_null(path)
+	if part == null:
+		push_warning("Level '%s': no node at '%s' to reveal" % [name, path])
+		return
+	if part is CanvasItem:
+		part.visible = visible_now

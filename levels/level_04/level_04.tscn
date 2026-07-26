@@ -5,7 +5,7 @@
 [ext_resource type="PackedScene" path="res://entities/props/moai/moai.tscn" id="3_at8b7"]
 [ext_resource type="PackedScene" path="res://entities/props/pinball/pinball.tscn" id="4_rodoa"]
 [ext_resource type="PackedScene" path="res://entities/props/bomb/bomb.tscn" id="5_i65sg"]
-[ext_resource type="PackedScene" uid="uid://dkjyhefqbosj7" path="res://entities/props/ball/ball.tscn" id="6_rssl4"]
+[ext_resource type="PackedScene" uid="uid://dkjyhefqbosj7" path="res://entities/ball/ball.tscn" id="6_rssl4"]
 [ext_resource type="Script" uid="uid://depun3jsxl11e" path="res://levels/Goal.gd" id="7_ddfhi"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_stone"]

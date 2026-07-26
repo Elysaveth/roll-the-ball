@@ -43,9 +43,15 @@ enum PropAction { ROTATE, RESIZE, DELETE }
 
 ## Which prop the open context menu belongs to.
 var _menu_target: PlaceableObject = null
+## While staged, _refresh_controls must not put the palette back — the tutorial owns
+## what is visible until it hands over.
+var _tutorial_staged: bool = false
 
 
 func _ready() -> void:
+	# The tutorial finds the HUD through this group rather than a node path, so
+	# main.tscn can be rearranged without breaking it.
+	add_to_group("hud")
 	back_button.pressed.connect(GameManager.return_to_level_select)
 	play_button.pressed.connect(GameManager.toggle_play)
 	pause_button.pressed.connect(GameManager.toggle_pause)
@@ -78,6 +84,45 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	time_label.text = format_seconds(GameManager.get_time_remaining())
+
+
+# --------------------------------------------------------------- tutorial ----
+# The tutorial reveals the HUD a piece at a time as Joe explains it, so it needs to be
+# able to take pieces away first. Kept as explicit named calls rather than letting the
+# tutorial reach into node paths, so rearranging hud.tscn can't break it.
+
+## Hides everything the tutorial introduces. Called before the first line is spoken.
+func stage_for_tutorial() -> void:
+	_tutorial_staged = true
+	set_clock_visible(false)
+	set_palette_visible(false)
+	set_controls_visible(false)
+
+
+## Puts everything back, whether the tutorial finished or was skipped.
+func unstage_from_tutorial() -> void:
+	_tutorial_staged = false
+	set_clock_visible(true)
+	set_palette_visible(true)
+	set_controls_visible(true)
+	_refresh_controls()
+
+
+func set_clock_visible(shown: bool) -> void:
+	time_label.visible = shown
+	best_label.visible = shown
+
+
+func set_palette_visible(shown: bool) -> void:
+	palette_items.get_parent().visible = shown
+
+
+## The Play/Pause/Back row. Hidden during the tutorial so the level can't be started
+## halfway through the explanation.
+func set_controls_visible(shown: bool) -> void:
+	back_button.visible = shown
+	play_button.visible = shown
+	pause_button.visible = shown
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -247,8 +292,9 @@ func _refresh_controls() -> void:
 	# Only a running simulation can be paused.
 	pause_button.disabled = not (mode == GameManager.Mode.PLAY or mode == GameManager.Mode.PAUSED)
 	pause_button.text = tr("HUD_RESUME") if mode == GameManager.Mode.PAUSED else tr("HUD_PAUSE")
-	# Props are only draggable in EDIT, so offering the palette elsewhere lies.
-	palette_items.get_parent().visible = mode == GameManager.Mode.EDIT
+	# Props are only draggable in EDIT, so offering the palette elsewhere lies. The
+	# tutorial overrides this while it's explaining what the palette is for.
+	palette_items.get_parent().visible = mode == GameManager.Mode.EDIT and not _tutorial_staged
 
 	# Paused is the dimmer, not a panel.
 	pause_overlay.visible = mode == GameManager.Mode.PAUSED

@@ -15,6 +15,8 @@ extends Node
 # all, but not one that aborted halfway. Grep for it.
 
 const PROP_SCENE: String = "res://entities/props/hielo/hielo.tscn"
+## A name nobody would type, so the suite never touches a real save.
+const TEST_PLAYER: String = "__smoke_test__"
 
 var _failures: int = 0
 var _checks_run: int = 0
@@ -23,9 +25,8 @@ var _main: Node = null
 
 
 func _ready() -> void:
-	_backup_user_data()
 	await _run()
-	_restore_user_data()
+	_cleanup_test_player()
 
 	print("")
 	if _failures == 0:
@@ -82,6 +83,8 @@ func _run() -> void:
 	await _phase("wood cracks on impact only", _test_wood_cracks_on_impact)
 	await _phase("bomb is instant", _test_bomb_is_instant)
 	await _phase("intro sequence", _test_intro_sequence)
+	await _phase("progress follows the name", _test_progress_per_player)
+	await _phase("tutorial", _test_tutorial)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -427,13 +430,21 @@ func _test_scale_clamping() -> void:
 
 func _test_player_name() -> void:
 	print("\n[player name]")
-	check(not SaveManager.has_player_name(), "a fresh profile has no name yet")
 	SaveManager.set_player_name("   Lizzy   ")
 	check(SaveManager.get_player_name() == "Lizzy", "the name is trimmed on the way in")
-	check(SaveManager.has_player_name(), "has_player_name() flips once set")
+	check(SaveManager.has_player_name(), "has_player_name() reports a live player")
+	# The name is the save's identity now, so setting it must have switched profiles.
+	check(
+		SaveManager._active_slug.begins_with("lizzy-"),
+		"the save directory follows the name (%s)" % SaveManager._active_slug
+	)
 
-	SaveManager.load_profile()
-	check(SaveManager.get_player_name() == "Lizzy", "the name survives a profile reload")
+	SaveManager.switch_player("Lizzy")
+	check(SaveManager.get_player_name() == "Lizzy", "the name survives a reload")
+	# Clean up so the suite doesn't leave a stray player behind.
+	SaveManager.erase_all_data()
+	SaveManager.switch_player(TEST_PLAYER)
+	SaveManager.mark_tutorial_seen()
 
 
 ## Guards the localisation wiring. A missing translation resource doesn't crash —
@@ -942,6 +953,13 @@ func _test_debug_unlock() -> void:
 	Settings.set_debug_unlock_all(restore)
 
 
+## Removes the throwaway player the suite ran inside, so repeated runs don't litter
+## user://players with them.
+func _cleanup_test_player() -> void:
+	SaveManager.switch_player(TEST_PLAYER)
+	SaveManager.erase_all_data()
+
+
 ## Every default binding must render a readable key name. The project sets only
 ## `physical_keycode`, and as_text_key_label() reads `key_label` — so this silently
 ## showed every control as unbound until the lookup went through the keyboard layout.
@@ -1086,7 +1104,7 @@ func _test_prop_tuning_differs() -> void:
 	)
 
 	# Launchers differ in what they react to, not just how hard they hit.
-	var cannon: Launcher = load("res://entities/props/cañon/canon.tscn").instantiate()
+	var cannon: Launcher = load("res://entities/props/canon/canon.tscn").instantiate()
 	var spring: Launcher = load("res://entities/props/muelle/muelle.tscn").instantiate()
 	container.add_child(cannon)
 	container.add_child(spring)
@@ -1162,13 +1180,20 @@ func _test_wood_cracks_on_impact() -> void:
 
 	var before: int = SaveManager.get_material_count("wood_chips")
 	GameManager.start_attempt()
+	var peak_impact: float = 0.0
+	var peak_speed: float = 0.0
 	for i in range(120):
 		await get_tree().physics_frame
+		var ball: Ball = level.get_ball()
+		if ball != null:
+			peak_impact = maxf(peak_impact, ball.last_impact)
+			peak_speed = maxf(peak_speed, ball.linear_velocity.length())
 		if not is_instance_valid(target):
 			break
-	check(not is_instance_valid(target), "a ball dropped onto it breaks it (ball ended at %s)" % [
-		level.get_ball().global_position if level.get_ball() != null else Vector2.ZERO
-	])
+	check(
+		not is_instance_valid(target),
+		"a ball dropped onto it breaks it (peak impact %.0f, peak speed %.0f)" % [peak_impact, peak_speed]
+	)
 	check(
 		SaveManager.get_material_count("wood_chips") > before,
 		"and that credits materials (%d -> %d)" % [before, SaveManager.get_material_count("wood_chips")]
@@ -1279,6 +1304,146 @@ func _test_intro_sequence() -> void:
 		node.queue_free()
 
 
+## Progress belongs to the NAME, not the install. Without that, one finished run could
+## be resubmitted under any number of names and flood every leaderboard.
+func _test_progress_per_player() -> void:
+	print("\n[progress follows the name]")
+	var original: String = "__probe_one__"
+	var other: String = "__probe_two__"
+
+	SaveManager.switch_player(original)
+	SaveManager.erase_all_data()
+	SaveManager.switch_player(original)
+	check(SaveManager.get_player_name() == original, "the active player is the one just set")
+	check(not SaveManager.has_progress(), "a brand new name starts with nothing")
+
+	# Earn something.
+	SaveManager.charge_for_completion(1, 4.0)
+	SaveManager.save_layout(1, {"format_version": 1, "objects": []})
+	check(SaveManager.has_progress(), "clearing a level counts as progress")
+	check(is_equal_approx(SaveManager.get_best_time(1), 4.0), "the best time is recorded")
+	check(SaveManager.has_layout(1), "and the layout is saved")
+
+	# A different name must be a clean slate.
+	SaveManager.switch_player(other)
+	SaveManager.erase_all_data()
+	SaveManager.switch_player(other)
+	check(not SaveManager.has_progress(), "switching to another name resets progress")
+	check(SaveManager.get_best_time(1) < 0.0, "with no best times")
+	check(not SaveManager.has_layout(1), "and none of the other player's layouts")
+	check(is_equal_approx(SaveManager.get_time_bank(), SaveManager.STARTING_BANK), "and a full time bank")
+
+	# Typing the original back must restore it untouched.
+	SaveManager.switch_player(original)
+	check(SaveManager.has_progress(), "switching back restores the first player's progress")
+	check(is_equal_approx(SaveManager.get_best_time(1), 4.0), "including their best time")
+	check(SaveManager.has_layout(1), "and their layouts")
+
+	# Names that would sanitise to the same directory must not share a save.
+	SaveManager.switch_player("a b")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("a b")
+	SaveManager.charge_for_completion(1, 7.0)
+	SaveManager.switch_player("a_b")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("a_b")
+	check(
+		SaveManager.get_best_time(1) < 0.0,
+		"'a b' and 'a_b' do not collide onto one save"
+	)
+
+	for junk in [original, other, "a b", "a_b"]:
+		SaveManager.switch_player(junk)
+		SaveManager.erase_all_data()
+	SaveManager.switch_player(TEST_PLAYER)
+	# Otherwise the tutorial claims level 1 (no progress = it should run), despawns the
+	# ball and blocks the mouse for everything after it. _test_tutorial drives it
+	# explicitly instead, from its own fresh player.
+	SaveManager.mark_tutorial_seen()
+
+
+## Joe's introduction. It builds the level up as he talks, so what matters is that
+## nothing is on screen at the start, everything is by the end, and skipping lands in
+## exactly the same place.
+func _test_tutorial() -> void:
+	print("\n[tutorial]")
+	var tutorial: Tutorial = _main.get_node_or_null("UI/Tutorial")
+	check(tutorial != null, "main.tscn hosts the tutorial")
+	if tutorial == null:
+		return
+	var hud: HUDController = _main.get_node_or_null("UI/HUD")
+	var level: Level = GameManager.get_current_level()
+	if hud == null or level == null:
+		check(false, "the HUD and level are available")
+		return
+
+	check(Tutorial.STEPS.size() == 6, "there are six beats (%d)" % Tutorial.STEPS.size())
+	# Each staged part must be something the steps actually put back, or the level would
+	# stay permanently missing a piece.
+	var revealed: Dictionary = {}
+	for step in Tutorial.STEPS:
+		for path in step.get("reveal", []):
+			revealed[str(path)] = true
+	for path in Tutorial.STAGED_PARTS:
+		check(revealed.has(path), "'%s' is hidden AND revealed by some step" % path)
+
+	# Fresh player with nothing behind them: the tutorial should take over.
+	SaveManager.switch_player("__tutorial_probe__")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("__tutorial_probe__")
+	check(not SaveManager.has_seen_tutorial(), "a new player has not seen it")
+
+	tutorial.force_start()
+	await get_tree().process_frame
+	check(tutorial.visible, "it takes over the screen")
+	check(level.get_ball() == null, "the level starts with no ball")
+	check(not hud.time_label.visible, "the clock is hidden")
+	check(not hud.palette_items.get_parent().visible, "the palette is hidden")
+	check(not hud.play_button.visible, "and Play can't be pressed mid-explanation")
+	check(not level.get_node("Geometry/LeftLedge").visible, "the platform is hidden")
+	check(not level.get_node("Goal").visible, "the basket is hidden")
+
+	# Step through: ball, basket, clock, palette.
+	tutorial._advance()
+	await get_tree().process_frame
+	check(level.get_node("Geometry/LeftLedge").visible, "the platform appears with the ball")
+	check(level.get_ball() != null, "and the ball is spawned")
+
+	tutorial._advance()
+	check(level.get_node("Goal").visible, "the basket appears next")
+
+	tutorial._advance()
+	check(hud.time_label.visible, "then the clock")
+
+	tutorial._advance()
+	check(hud.palette_items.get_parent().visible, "then the palette")
+
+	# Skipping from the last beat must still hand over a complete level.
+	tutorial._finish()
+	await get_tree().process_frame
+	check(not tutorial.visible, "it gets out of the way when done")
+	check(SaveManager.has_seen_tutorial(), "and is remembered, so it won't replay")
+	for path in Tutorial.STAGED_PARTS:
+		check(level.get_node(path).visible, "'%s' is visible once it hands over" % path)
+	check(hud.play_button.visible, "the controls are back")
+	check(hud.palette_items.get_parent().visible, "the palette is back")
+	check(level.get_ball() != null, "and the ball is on the platform")
+
+	# Having seen it, a re-entry must not start it again.
+	tutorial._on_level_started(Tutorial.TUTORIAL_LEVEL)
+	check(not tutorial.visible, "it does not restart for a player who has seen it")
+
+	# And a player who already has progress never sees it at all.
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("__tutorial_probe__")
+	SaveManager.charge_for_completion(1, 3.0)
+	tutorial._on_level_started(Tutorial.TUTORIAL_LEVEL)
+	check(not tutorial.visible, "nor does a player who already has progress")
+
+	SaveManager.erase_all_data()
+	SaveManager.switch_player(TEST_PLAYER)
+
+
 # ---------------------------------------------------------------- helpers ----
 
 func _finish_attempt_in(seconds: float) -> void:
@@ -1304,11 +1469,17 @@ func check(condition: bool, message: String) -> void:
 
 
 func _reset_profile() -> void:
+	# Progress now lives per player name, so the suite works inside a throwaway one
+	# rather than clearing whatever the real player has.
+	SaveManager.switch_player(TEST_PLAYER)
 	for level_id in SaveManager.list_saved_layouts():
 		SaveManager.delete_layout(level_id)
-	if FileAccess.file_exists(SaveManager.PROFILE_PATH):
-		DirAccess.remove_absolute(SaveManager.PROFILE_PATH)
-	SaveManager.load_profile()
+	SaveManager.erase_all_data()
+	SaveManager.switch_player(TEST_PLAYER)
+	# Without this the tutorial claims level 1 — a player with no progress is exactly
+	# who it's for — then despawns the ball and covers the screen for every test after
+	# it. _test_tutorial drives it explicitly from its own fresh player instead.
+	SaveManager.mark_tutorial_seen()
 
 
 func _backup_user_data() -> void:

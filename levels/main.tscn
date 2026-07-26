@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://b1eq6ggu6r4ca"]
+[gd_scene load_steps=6 format=3 uid="uid://b1eq6ggu6r4ca"]
 
 [ext_resource type="Script" path="res://levels/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://systems/camera_system/CameraController.gd" id="2_camera"]
 [ext_resource type="PackedScene" path="res://ui/hud/hud.tscn" id="3_hud"]
+[ext_resource type="PackedScene" path="res://ui/tutorial/Tutorial.tscn" id="5_tutorial"]
 [ext_resource type="Texture2D" path="res://assets/backgrounds/Paper Texture7.jpg" id="4_paper7"]
 
 [node name="Main" type="Node2D"]
@@ -35,3 +36,5 @@ script = ExtResource("2_camera")
 [node name="UI" type="Node" parent="."]
 
 [node name="HUD" parent="UI" instance=ExtResource("3_hud")]
+
+[node name="Tutorial" parent="UI" instance=ExtResource("5_tutorial")]

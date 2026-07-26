@@ -17,28 +17,164 @@ extends Node
 # while dragging, so GameManager decides when those hit disk (on PLAY, and on
 # leaving the level) rather than on a timer. See GameManager for why.
 
-const SAVE_DIR: String = "user://saves/"
-const PROFILE_PATH: String = "user://profile.json"
+# PROGRESS IS PER PLAYER NAME
+# ---------------------------
+# Everything a player has earned lives under user://players/<slug>/, so changing the
+# name in the main menu switches to a different save entirely: a new name starts from
+# nothing, and typing the old one back restores it untouched.
+#
+# That is a leaderboard-integrity requirement, not a convenience. With one shared
+# profile, somebody could clear the game once and then submit that same finished run
+# under any number of names, filling every board with a single afternoon's work.
+#
+# LAYOUTS are per player too. They are progress — the arrangement that produced a
+# best time — so a fresh name must not inherit the previous one's solved levels.
+
+const PLAYERS_DIR: String = "user://players/"
+## Remembers who was playing so the menu can prefill the field next launch.
+const LAST_PLAYER_PATH: String = "user://last_player.cfg"
+
+## Pre-per-player locations, migrated once on first run of this build.
+const LEGACY_SAVE_DIR: String = "user://saves/"
+const LEGACY_PROFILE_PATH: String = "user://profile.json"
 
 ## The whole game is played out of this one budget, in seconds.
 const STARTING_BANK: float = 60.0
 
-const PROFILE_VERSION: int = 1
+const PROFILE_VERSION: int = 2
 
 var _profile: Dictionary = {}
+## Empty until a name has been entered. Nothing is written to disk before then.
+var _active_name: String = ""
+var _active_slug: String = ""
 
 
 func _ready() -> void:
-	if not DirAccess.dir_exists_absolute(SAVE_DIR):
-		DirAccess.make_dir_recursive_absolute(SAVE_DIR)
+	_migrate_legacy_save()
+	var last: String = _read_last_player()
+	if last.is_empty():
+		# No player yet: defaults in memory so the menus have something to show.
+		_profile = _default_profile()
+	else:
+		switch_player(last)
+
+
+# --------------------------------------------------------------- identity ----
+
+## Loads the profile belonging to `player_name`, creating it if this is a new name.
+## Idempotent, so re-entering the same name is free.
+func switch_player(player_name: String) -> void:
+	var trimmed: String = player_name.strip_edges()
+	if trimmed == _active_name and not _profile.is_empty():
+		return
+
+	_active_name = trimmed
+	_active_slug = _slug_for(trimmed) if not trimmed.is_empty() else ""
+	if not _active_slug.is_empty():
+		DirAccess.make_dir_recursive_absolute(_player_saves_dir())
 	load_profile()
+	if not trimmed.is_empty():
+		_profile["player_name"] = trimmed
+		_write_last_player(trimmed)
+		save_profile()
+	SignalBus.player_name_changed.emit(trimmed)
+
+
+## Filesystem-safe directory name for a player.
+##
+## A readable prefix plus a hash of the exact name. The prefix alone would collide —
+## "A b" and "A_b" sanitise identically, and two players would silently share one
+## save — while the hash alone would make user:// unreadable to a human.
+## Case matters, because the leaderboard treats "Liz" and "liz" as different players.
+func _slug_for(player_name: String) -> String:
+	var safe: String = ""
+	for character in player_name.to_lower():
+		if (character >= "a" and character <= "z") or (character >= "0" and character <= "9"):
+			safe += character
+		else:
+			safe += "_"
+	safe = safe.substr(0, 24)
+	if safe.is_empty():
+		safe = "player"
+	return "%s-%s" % [safe, player_name.sha256_text().substr(0, 8)]
+
+
+func _player_dir() -> String:
+	return PLAYERS_DIR + _active_slug + "/"
+
+
+func _player_saves_dir() -> String:
+	return _player_dir() + "saves/"
+
+
+func _profile_path() -> String:
+	return _player_dir() + "profile.json"
+
+
+func _read_last_player() -> String:
+	var config: ConfigFile = ConfigFile.new()
+	if config.load(LAST_PLAYER_PATH) != OK:
+		return ""
+	return str(config.get_value("player", "name", ""))
+
+
+func _write_last_player(player_name: String) -> void:
+	var config: ConfigFile = ConfigFile.new()
+	config.set_value("player", "name", player_name)
+	config.save(LAST_PLAYER_PATH)
+
+
+## Moves a pre-per-player save into the new layout, once, so nobody loses progress
+## to the restructure. Keyed on the name that profile already carried.
+func _migrate_legacy_save() -> void:
+	if not FileAccess.file_exists(LEGACY_PROFILE_PATH):
+		return
+	var parsed: Variant = _read_json(LEGACY_PROFILE_PATH)
+	if not parsed is Dictionary:
+		DirAccess.remove_absolute(LEGACY_PROFILE_PATH)
+		return
+
+	var legacy: Dictionary = parsed
+	var owner_name: String = str(legacy.get("player_name", "")).strip_edges()
+	if owner_name.is_empty():
+		# Anonymous progress can't be attributed to anyone, so there is nothing to
+		# migrate it into.
+		DirAccess.remove_absolute(LEGACY_PROFILE_PATH)
+		return
+
+	var slug: String = _slug_for(owner_name)
+	var destination: String = PLAYERS_DIR + slug + "/"
+	DirAccess.make_dir_recursive_absolute(destination + "saves/")
+	if not FileAccess.file_exists(destination + "profile.json"):
+		_write_json(destination + "profile.json", legacy)
+
+	var dir: DirAccess = DirAccess.open(LEGACY_SAVE_DIR)
+	if dir != null:
+		dir.list_dir_begin()
+		var file_name: String = dir.get_next()
+		while file_name != "":
+			if file_name.ends_with(".json"):
+				var from: String = LEGACY_SAVE_DIR + file_name
+				var to: String = destination + "saves/" + file_name
+				if not FileAccess.file_exists(to):
+					DirAccess.copy_absolute(from, to)
+				DirAccess.remove_absolute(from)
+			file_name = dir.get_next()
+		dir.list_dir_end()
+
+	DirAccess.remove_absolute(LEGACY_PROFILE_PATH)
+	_write_last_player(owner_name)
+	print("SaveManager: migrated legacy progress for '%s'" % owner_name)
 
 
 # ---------------------------------------------------------------- profile ----
 
 func load_profile() -> void:
 	_profile = _default_profile()
-	var parsed: Variant = _read_json(PROFILE_PATH)
+	if _active_slug.is_empty():
+		SignalBus.profile_loaded.emit()
+		return
+	var parsed: Variant = _read_json(_profile_path())
 	if parsed is Dictionary:
 		# Merge rather than replace, so a profile written by an older build that
 		# lacks newer keys still boots with sane defaults for them.
@@ -48,7 +184,11 @@ func load_profile() -> void:
 
 
 func save_profile() -> bool:
-	if _write_json(PROFILE_PATH, _profile):
+	# Nothing is written until a player has identified themselves; there is no
+	# anonymous save to write to.
+	if _active_slug.is_empty():
+		return false
+	if _write_json(_profile_path(), _profile):
 		return true
 	SignalBus.profile_save_failed.emit()
 	return false
@@ -74,6 +214,7 @@ func _default_profile() -> Dictionary:
 		"unlocked_props": STARTING_PROPS.duplicate(),
 		"materials": {},         # material id -> count, for blueprint crafting later
 		"broken_counts": {},     # what the player has destroyed, feeds materials
+		"tutorial_seen": false,  # so it doesn't replay after every failed attempt
 	}
 
 
@@ -82,20 +223,34 @@ func _default_profile() -> Dictionary:
 # no name attached is useless to a leaderboard.
 
 func get_player_name() -> String:
-	return str(_profile.get("player_name", ""))
+	return _active_name
 
 
 func has_player_name() -> bool:
-	return not get_player_name().is_empty()
+	return not _active_name.is_empty()
 
 
+## Switching the name switches the whole save. Progress is not edited or cleared —
+## it stays where it is under the old name and comes back if that name is typed again.
 func set_player_name(value: String) -> void:
-	var trimmed: String = value.strip_edges()
-	if trimmed == get_player_name():
+	switch_player(value)
+
+
+## Whether this player has finished anything yet. Used to decide if they need the
+## tutorial and whether Play goes straight into level 1.
+func has_progress() -> bool:
+	return get_furthest_completed_level() > 0
+
+
+func has_seen_tutorial() -> bool:
+	return bool(_profile.get("tutorial_seen", false))
+
+
+func mark_tutorial_seen() -> void:
+	if has_seen_tutorial():
 		return
-	_profile["player_name"] = trimmed
+	_profile["tutorial_seen"] = true
 	save_profile()
-	SignalBus.player_name_changed.emit(trimmed)
 
 
 # ------------------------------------------------------------- time bank ----
@@ -263,6 +418,8 @@ func spend_materials(costs: Dictionary) -> bool:
 
 ## `layout` must be a dict produced by LevelLayout.capture().
 func save_layout(level_id: int, layout: Dictionary) -> bool:
+	if _active_slug.is_empty():
+		return false
 	var payload: Dictionary = layout.duplicate(true)
 	payload["level_id"] = level_id
 	payload["saved_at"] = Time.get_datetime_string_from_system()
@@ -294,6 +451,8 @@ func load_layout(level_id: int) -> Dictionary:
 
 
 func has_layout(level_id: int) -> bool:
+	if _active_slug.is_empty():
+		return false
 	return FileAccess.file_exists(_layout_path(level_id))
 
 
@@ -306,7 +465,9 @@ func delete_layout(level_id: int) -> void:
 
 func list_saved_layouts() -> Array[int]:
 	var ids: Array[int] = []
-	var dir: DirAccess = DirAccess.open(SAVE_DIR)
+	if _active_slug.is_empty():
+		return ids
+	var dir: DirAccess = DirAccess.open(_player_saves_dir())
 	if dir == null:
 		return ids
 	dir.list_dir_begin()
@@ -326,13 +487,13 @@ func list_saved_layouts() -> Array[int]:
 func erase_all_data() -> void:
 	for level_id in list_saved_layouts():
 		delete_layout(level_id)
-	if FileAccess.file_exists(PROFILE_PATH):
-		DirAccess.remove_absolute(PROFILE_PATH)
+	if not _active_slug.is_empty() and FileAccess.file_exists(_profile_path()):
+		DirAccess.remove_absolute(_profile_path())
 	load_profile()
 
 
 func _layout_path(level_id: int) -> String:
-	return "%slevel_%d.json" % [SAVE_DIR, level_id]
+	return "%slevel_%d.json" % [_player_saves_dir(), level_id]
 
 
 # ------------------------------------------------------------------- io ----

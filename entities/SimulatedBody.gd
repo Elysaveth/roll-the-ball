@@ -48,6 +48,8 @@ func _apply_mode_now(mode: GameManager.Mode) -> void:
 		# read as a colossal impact on the first step of the next one.
 		_last_speed = 0.0
 		last_impact = 0.0
+		_pending_impact = 0.0
+		_pending_steps = 0
 	else:
 		freeze = false
 	_on_mode_applied(mode)
@@ -63,7 +65,20 @@ func _on_mode_applied(_mode: GameManager.Mode) -> void:
 ## Read by PlaceableObject to decide whether it should shatter.
 var last_impact: float = 0.0
 
+## How many physics steps a measured impact stays "live", waiting for the contact that
+## caused it to be reported. Six steps is a tenth of a second — long enough to bridge
+## the solver's lag, short enough that a later gentle touch can't inherit it.
+const IMPACT_MEMORY_STEPS: int = 6
+
 var _last_speed: float = 0.0
+var _pending_impact: float = 0.0
+var _pending_steps: int = 0
+
+
+## The impact to judge a collision by: whatever was measured this step, or the recent
+## peak still waiting to be attributed.
+func get_effective_impact() -> float:
+	return maxf(last_impact, _pending_impact)
 
 
 ## Measures impacts and reports them to whatever was hit.
@@ -92,12 +107,36 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	last_impact = maxf(0.0, _last_speed - speed_now) * mass
 	_last_speed = speed_now
 
-	if freeze or last_impact <= 0.0:
+	# The impact is remembered for a few steps rather than used immediately, because the
+	# two facts arrive on DIFFERENT steps. _integrate_forces runs before the solver, so
+	# the step that shows the huge deceleration still reports zero contacts, and the
+	# contact only appears a step or two later once the ball has settled — by which
+	# point the measured impact is back to nothing. Measured 1374 against a 520
+	# threshold and reported to nobody, until this window was added.
+	if last_impact > _pending_impact:
+		_pending_impact = last_impact
+		_pending_steps = IMPACT_MEMORY_STEPS
+	elif _pending_steps > 0:
+		_pending_steps -= 1
+		if _pending_steps == 0:
+			_pending_impact = 0.0
+
+	if freeze:
 		return
+
+	var strength: float = get_effective_impact()
+	var reported: bool = false
 	for i in state.get_contact_count():
 		var other: Object = state.get_contact_collider_object(i)
 		if other is PlaceableObject:
-			other.try_break(last_impact)
+			var prop: PlaceableObject = other
+			prop.try_break(strength)
+			reported = true
+
+	# Spent: an impact should only ever be blamed on one collision.
+	if reported:
+		_pending_impact = 0.0
+		_pending_steps = 0
 
 
 ## Takes this body off the canvas immediately and frees it.
