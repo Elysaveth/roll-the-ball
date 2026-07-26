@@ -17,32 +17,33 @@ extends Node
 # SaveManager.unlock_prop() instead and are stored in the profile, so a prop can arrive
 # either way and neither route can revoke the other.
 
+## Everything is in the player's hands by level 5. Two or three arrive per level, in
+## rough order of how much thinking they demand, so each of the first five levels has
+## something new to show off.
 const PROPS: Dictionary = {
-	# --- starting kit: enough to bridge a gap, which is all level 1 asks -----
+	# --- 1: starting kit — enough to bridge a gap, which is all level 1 asks --
 	"hielo": {"level": 1, "scene": "res://entities/props/hielo/hielo.tscn"},
 	"madera": {"level": 1, "scene": "res://entities/props/madera/madera.tscn"},
 
-	# --- weight and durability ----------------------------------------------
+	# --- 2: weight, durability and a gentle bounce ---------------------------
 	"metal": {"level": 2, "scene": "res://entities/props/metal/metal.tscn"},
-	"moai": {"level": 3, "scene": "res://entities/props/moai/moai.tscn"},
+	"moai": {"level": 2, "scene": "res://entities/props/moai/moai.tscn"},
+	"muelle": {"level": 2, "scene": "res://entities/props/muelle/muelle.tscn"},
 
-	# --- redirection --------------------------------------------------------
-	"pinball": {"level": 4, "scene": "res://entities/props/pinball/pinball.tscn"},
-	"muelle": {"level": 5, "scene": "res://entities/props/muelle/muelle.tscn"},
-	"canon": {"level": 6, "scene": "res://entities/props/canon/canon.tscn"},
+	# --- 3: redirection, and the first thing that goes bang ------------------
+	"pinball": {"level": 3, "scene": "res://entities/props/pinball/pinball.tscn"},
+	"canon": {"level": 3, "scene": "res://entities/props/canon/canon.tscn"},
+	"bomb": {"level": 3, "scene": "res://entities/props/bomb/bomb.tscn"},
 
-	# --- things that go bang ------------------------------------------------
-	"bomb": {"level": 7, "scene": "res://entities/props/bomb/bomb.tscn"},
-	"dinamita": {"level": 8, "scene": "res://entities/props/dinamita/dinamita.tscn"},
-	"tntminecraft": {"level": 10, "scene": "res://entities/props/tntminecraft/tntminecraft.tscn"},
+	# --- 4: bigger blasts and self-propulsion --------------------------------
+	"dinamita": {"level": 4, "scene": "res://entities/props/dinamita/dinamita.tscn"},
+	"cohete_little": {"level": 4, "scene": "res://entities/props/cohete_little/cohete_little.tscn"},
+	"tntminecraft": {"level": 4, "scene": "res://entities/props/tntminecraft/tntminecraft.tscn"},
 
-	# --- propulsion ---------------------------------------------------------
-	"cohete_little": {"level": 9, "scene": "res://entities/props/cohete_little/cohete_little.tscn"},
-	"cohete_big": {"level": 11, "scene": "res://entities/props/cohete_big/cohete_big.tscn"},
-
-	# --- the clever stuff ---------------------------------------------------
-	"portal_in": {"level": 12, "scene": "res://entities/props/portal_in/portal_in.tscn"},
-	"portal_out": {"level": 12, "scene": "res://entities/props/portal_out/portal_out.tscn"},
+	# --- 5: the clever stuff. Portals arrive together — one half is useless ---
+	"cohete_big": {"level": 5, "scene": "res://entities/props/cohete_big/cohete_big.tscn"},
+	"portal_in": {"level": 5, "scene": "res://entities/props/portal_in/portal_in.tscn"},
+	"portal_out": {"level": 5, "scene": "res://entities/props/portal_out/portal_out.tscn"},
 }
 
 
