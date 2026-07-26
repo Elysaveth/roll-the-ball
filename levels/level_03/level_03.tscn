@@ -41,6 +41,8 @@ rotation = 0.19795917
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/LeftLedge" unique_id=280177779]
+position = Vector2(-189.27095, -33.429184)
+rotation = 0.5973973
 color = Color(0.31, 0.35, 0.42, 1)
 polygon = PackedVector2Array(-150, -20, 150, -20, 150, 20, -150, 20)
 
