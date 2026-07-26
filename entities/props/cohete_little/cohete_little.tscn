@@ -1,42 +1,38 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3 uid="uid://dglql5n5oven1"]
 
-[ext_resource type="Script" path="res://entities/props/Rocket.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://entities/props/cohete_little/cohete_little.png" id="2_tex"]
-
-[sub_resource type="AtlasTexture" id="Atlas_main"]
-atlas = ExtResource("2_tex")
-region = Rect2(564, 815, 243, 393)
+[ext_resource type="Script" uid="uid://ctvutk68kd6qr" path="res://entities/props/Rocket.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dslsgv86yq37a" path="res://entities/props/cohete_little/cohete_little.png" id="2_tex"]
 
 [sub_resource type="RectangleShape2D" id="Shape_body"]
-size = Vector2(58, 100)
+size = Vector2(31.306225, 84.788185)
 
-[sub_resource type="CircleShape2D" id="Shape_trigger"]
-radius = 56.0
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_nm8cv"]
+radius = 19.415773
+height = 109.77657
 
-[node name="CoheteLittle" type="RigidBody2D"]
-script = ExtResource("1_script")
+[node name="CoheteLittle" type="RigidBody2D" unique_id=597234808]
 mass = 4.0
-prop_id = "cohete_little"
-object_name = "Small rocket"
-thrust_gravities = 2.2
-burn_seconds = 0.9
-thrust_direction = Vector2(0, -1)
+script = ExtResource("1_script")
 ignite_mode = 0
 ignite_delay = 0.0
-wobble_torque = 0.0
-explode_on_burnout = false
-explode_on_impact = false
+burn_seconds = 0.9
 explosion_radius = 0.0
 explosion_force = 0.0
+prop_id = "cohete_little"
+object_name = "Small rocket"
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=15413582]
 scale = Vector2(0.28, 0.28)
-texture = SubResource("Atlas_main")
+texture = ExtResource("2_tex")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=118058483]
+position = Vector2(2.5060277, -8.294536)
+rotation = 0.61086524
 shape = SubResource("Shape_body")
 
-[node name="Trigger" type="Area2D" parent="."]
+[node name="Trigger" type="Area2D" parent="." unique_id=1195990435]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
-shape = SubResource("Shape_trigger")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger" unique_id=1538635243]
+position = Vector2(4, -11)
+rotation = 0.61086524
+shape = SubResource("CapsuleShape2D_nm8cv")

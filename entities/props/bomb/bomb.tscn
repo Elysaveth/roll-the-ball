@@ -1,42 +1,36 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3 uid="uid://dpn38ghijay6e"]
 
-[ext_resource type="Script" path="res://entities/props/Explosive.gd" id="1_bomb"]
-[ext_resource type="Texture2D" path="res://entities/props/bomb/bomb.png" id="2_tex"]
-[ext_resource type="PackedScene" path="res://entities/effects/explosion/explosion.tscn" id="3_explosion"]
+[ext_resource type="Script" uid="uid://k7vs1as44mx2" path="res://entities/props/Explosive.gd" id="1_bomb"]
+[ext_resource type="Texture2D" uid="uid://d0j0547ssyjis" path="res://entities/props/bomb/bomb.png" id="2_tex"]
+[ext_resource type="PackedScene" uid="uid://cn6o62nqfp2vt" path="res://entities/effects/explosion/explosion.tscn" id="3_explosion"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_bomb"]
-atlas = ExtResource("2_tex")
-region = Rect2(217, 853, 290, 423)
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_bomb"]
-size = Vector2(80, 120)
+[sub_resource type="CircleShape2D" id="CircleShape2D_3lubl"]
+radius = 45.01111
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_trigger"]
-radius = 68.0
+radius = 56.0
 
-[node name="Bomb" type="RigidBody2D"]
+[node name="Bomb" type="RigidBody2D" unique_id=1078297550]
 mass = 6.0
 script = ExtResource("1_bomb")
-prop_id = "bomb"
-object_name = "Bomba"
+fuse_seconds = 0.0
 explosion_scene = ExtResource("3_explosion")
 blast_radius = 200.0
 blast_force = 1300.0
-fuse_seconds = 0.0
 break_power = 0.8
 shake_strength = 10.0
-trigger_mode = 0
-arm_delay = 0.4
-chain_reaction = true
+prop_id = "bomb"
+object_name = "Bomba"
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1608793607]
+position = Vector2(0, -20)
 scale = Vector2(0.3, 0.3)
-texture = SubResource("AtlasTexture_bomb")
+texture = ExtResource("2_tex")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("RectangleShape2D_bomb")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1152775708]
+shape = SubResource("CircleShape2D_3lubl")
 
-[node name="Trigger" type="Area2D" parent="."]
+[node name="Trigger" type="Area2D" parent="." unique_id=2083468008]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger" unique_id=1559974712]
 shape = SubResource("CircleShape2D_trigger")

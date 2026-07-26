@@ -1,33 +1,32 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3 uid="uid://ikc66l3rn5y8"]
 
-[ext_resource type="Script" path="res://entities/props/Portal.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://entities/props/portal_in/portal_in.png" id="2_tex"]
+[ext_resource type="Script" uid="uid://v1en0e6oed44" path="res://entities/props/Portal.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://b7kdf2bsirqly" path="res://entities/props/portal_in/portal_in.png" id="2_tex"]
 
-[sub_resource type="AtlasTexture" id="Atlas_main"]
-atlas = ExtResource("2_tex")
-region = Rect2(224, 179, 279, 52)
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_8hrf1"]
+radius = 12.0
+height = 162.0
 
-[sub_resource type="RectangleShape2D" id="Shape_body"]
-size = Vector2(160, 16)
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_3lubl"]
+radius = 14.0
+height = 164.0
 
-[sub_resource type="RectangleShape2D" id="Shape_trigger"]
-size = Vector2(150, 48)
-
-[node name="PortalIn" type="RigidBody2D"]
-script = ExtResource("1_script")
+[node name="PortalIn" type="RigidBody2D" unique_id=1073538234]
 mass = 30.0
+script = ExtResource("1_script")
 prop_id = "portal_in"
 object_name = "Portal in"
-is_exit = false
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=133027873]
 scale = Vector2(0.6, 0.6)
-texture = SubResource("Atlas_main")
+texture = ExtResource("2_tex")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("Shape_body")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=694066243]
+rotation = 1.5707964
+shape = SubResource("CapsuleShape2D_8hrf1")
 
-[node name="Trigger" type="Area2D" parent="."]
+[node name="Trigger" type="Area2D" parent="." unique_id=1363332076]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
-shape = SubResource("Shape_trigger")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger" unique_id=427084222]
+rotation = 1.5707964
+shape = SubResource("CapsuleShape2D_3lubl")

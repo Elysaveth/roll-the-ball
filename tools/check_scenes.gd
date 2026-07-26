@@ -16,11 +16,38 @@ func _initialize() -> void:
 		if scene == null or not scene.can_instantiate():
 			failed += 1
 			print("  FAIL  %s" % path)
-		else:
+			continue
+
+		# can_instantiate() is NOT enough on its own: a scene whose ext_resource points
+		# at a moved or deleted file still loads and still reports true, having quietly
+		# dropped the reference. That is exactly how a level ended up with no ball
+		# scene while this tool called it fine.
+		var missing: Array[String] = _missing_dependencies(path)
+		if missing.is_empty():
 			print("  ok    %s" % path)
+		else:
+			failed += 1
+			print("  FAIL  %s -> missing %s" % [path, ", ".join(missing)])
 
 	print("\n%d scene(s) checked, %d failed" % [paths.size(), failed])
 	quit(failed)
+
+
+## Every res:// path a scene depends on that no longer resolves.
+##
+## get_dependencies() returns entries shaped like "uid://abc::PackedScene::res://real/path"
+## — the useful part is whichever component is an actual res:// path.
+func _missing_dependencies(path: String) -> Array[String]:
+	var missing: Array[String] = []
+	for entry in ResourceLoader.get_dependencies(path):
+		var dependency: String = ""
+		for part in str(entry).split("::"):
+			if part.begins_with("res://"):
+				dependency = part
+		if dependency.is_empty() or ResourceLoader.exists(dependency):
+			continue
+		missing.append(dependency)
+	return missing
 
 
 func _collect(dir_path: String, out: Array[String]) -> void:

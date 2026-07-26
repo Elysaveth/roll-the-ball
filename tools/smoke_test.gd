@@ -81,6 +81,7 @@ func _run() -> void:
 	await _phase("pause dims rather than panels", _test_pause_overlay)
 	await _phase("wood cracks on impact only", _test_wood_cracks_on_impact)
 	await _phase("bomb is instant", _test_bomb_is_instant)
+	await _phase("intro sequence", _test_intro_sequence)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -1198,6 +1199,84 @@ func _test_bomb_is_instant() -> void:
 	bomb.apply_save_state({"fuse_seconds": 5.0})
 	check(is_zero_approx(bomb.fuse_seconds), "an old save file cannot override the scene's fuse")
 	LevelLayout.clear(container)
+
+
+## The opening sequence. The word-by-word assembly is checked directly rather than by
+## waiting on it, then the whole thing is run once end to end — an intro that never
+## finishes would leave the player staring at a logo with no way in.
+func _test_intro_sequence() -> void:
+	print("\n[intro sequence]")
+
+	# Cumulative title, which is what "punching in" means here.
+	check(MainMenu.title_up_to(1) == "Roll", "one word reads 'Roll' (got '%s')" % MainMenu.title_up_to(1))
+	check(MainMenu.title_up_to(2) == "Roll the", "two words read 'Roll the'")
+	check(MainMenu.title_up_to(3) == "Roll the Ball", "three words read 'Roll the Ball'")
+	check(MainMenu.WORD_HOLDS.size() == MainMenu.TITLE_WORDS.size(), "every word has a hold time")
+	check(
+		is_equal_approx(MainMenu.WORD_HOLDS[0], 0.8)
+			and is_equal_approx(MainMenu.WORD_HOLDS[1], 0.4)
+			and is_equal_approx(MainMenu.WORD_HOLDS[2], 2.0),
+		"the holds are 0.8 / 0.4 / 2.0 as specified"
+	)
+
+	# A fresh launch has not played it yet.
+	MainMenu._intro_played = false
+	var menu: Control = load(GameManager.MAIN_MENU_SCENE).instantiate()
+	get_tree().root.add_child(menu)
+	await get_tree().process_frame
+
+	check(menu.intro.visible, "the intro starts over the empty background")
+	check(not menu.body.visible, "the rest of the menu is hidden")
+	check(menu.title_label.text.is_empty(), "and the title starts blank")
+	# Released so the panel can grow with the title instead of sitting at full width.
+	check(is_zero_approx(menu.panel.custom_minimum_size.x), "the panel is free to hug the title")
+
+	# Let it run to completion, with a generous ceiling.
+	var budget: float = MainMenu.LOGO_FADE_IN * 2.0 + MainMenu.LOGO_HOLD \
+		+ MainMenu.LOGO_FADE_OUT + MainMenu.PAPER_BEAT + 3.2 + MainMenu.BODY_FADE_IN + 3.0
+	var finished: Dictionary = {"done": false}
+	menu.intro_finished.connect(func() -> void: finished["done"] = true)
+	var waited: float = 0.0
+	while not finished["done"] and waited < budget:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+
+	check(finished["done"], "the intro finishes on its own (%.1fs of %.1fs budget)" % [waited, budget])
+	check(menu.title_label.text == "Roll the Ball", "the full title is left on screen")
+	check(menu.body.visible, "the rest of the menu appears")
+	check(not menu.intro.visible, "and the logo overlay is gone")
+	check(
+		is_equal_approx(menu.panel.custom_minimum_size.x, MainMenu.PANEL_WIDTH),
+		"the panel settles at its full width"
+	)
+
+	menu.get_parent().remove_child(menu)
+	menu.queue_free()
+	await get_tree().process_frame
+
+	# Backing out of the level select is not a fresh launch, so it must NOT replay.
+	var second: Control = load(GameManager.MAIN_MENU_SCENE).instantiate()
+	get_tree().root.add_child(second)
+	await get_tree().process_frame
+	check(not second.intro.visible, "returning to the menu does not replay the intro")
+	check(second.body.visible, "it opens straight onto a usable menu")
+	check(second.title_label.text == "Roll the Ball", "with the title already in place")
+
+	# Skipping has to reach exactly the same state from mid-intro.
+	MainMenu._intro_played = false
+	var third: Control = load(GameManager.MAIN_MENU_SCENE).instantiate()
+	get_tree().root.add_child(third)
+	await get_tree().process_frame
+	check(third.intro.visible, "a third fresh launch starts the intro again")
+	third.skip_intro()
+	await get_tree().process_frame
+	check(not third.intro.visible, "skipping hides the overlay")
+	check(third.body.visible, "and reveals the menu immediately")
+	check(third.title_label.text == "Roll the Ball", "with the full title")
+
+	for node in [second, third]:
+		node.get_parent().remove_child(node)
+		node.queue_free()
 
 
 # ---------------------------------------------------------------- helpers ----

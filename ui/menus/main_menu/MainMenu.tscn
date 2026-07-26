@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://ui/menus/main_menu/MainMenu.gd" id="1_mainmenu"]
 [ext_resource type="PackedScene" path="res://ui/menus/settings/SettingsMenu.tscn" id="2_settings"]
 [ext_resource type="PackedScene" path="res://ui/common/MenuBackground.tscn" id="3_bg"]
+[ext_resource type="Texture2D" path="res://assets/logo/icon.png" id="4_logo"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -24,6 +25,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="Center"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(620, 0)
 layout_mode = 2
 
@@ -32,19 +34,26 @@ layout_mode = 2
 theme_override_constants/separation = 18
 
 [node name="Title" type="Label" parent="Center/Panel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 56
 text = "APP_TITLE"
 horizontal_alignment = 1
 
-[node name="Prompt" type="Label" parent="Center/Panel/VBox"]
+[node name="Body" type="VBoxContainer" parent="Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Prompt" type="Label" parent="Center/Panel/VBox/Body"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "MENU_NAME_PROMPT"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="NameField" type="LineEdit" parent="Center/Panel/VBox"]
+[node name="NameField" type="LineEdit" parent="Center/Panel/VBox/Body"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
@@ -52,25 +61,29 @@ placeholder_text = "MENU_NAME_PLACEHOLDER"
 alignment = 1
 caret_blink = true
 
-[node name="HintLabel" type="Label" parent="Center/Panel/VBox"]
+[node name="HintLabel" type="Label" parent="Center/Panel/VBox/Body"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.55, 0.35, 1)
 theme_override_font_sizes/font_size = 18
 text = "MENU_NAME_REQUIRED"
 horizontal_alignment = 1
 
-[node name="PlayButton" type="Button" parent="Center/Panel/VBox"]
+[node name="PlayButton" type="Button" parent="Center/Panel/VBox/Body"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 disabled = true
 text = "MENU_PLAY"
 
-[node name="SettingsButton" type="Button" parent="Center/Panel/VBox"]
+[node name="SettingsButton" type="Button" parent="Center/Panel/VBox/Body"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 text = "SETTINGS_TITLE"
 
-[node name="QuitButton" type="Button" parent="Center/Panel/VBox"]
+[node name="QuitButton" type="Button" parent="Center/Panel/VBox/Body"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 text = "MENU_QUIT"
@@ -78,3 +91,52 @@ text = "MENU_QUIT"
 [node name="SettingsMenu" parent="." instance=ExtResource("2_settings")]
 visible = false
 layout_mode = 1
+
+[node name="Intro" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Scrim" type="ColorRect" parent="Intro"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.09, 0.08, 0.07, 1)
+
+[node name="LogoBox" type="CenterContainer" parent="Intro"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Intro/LogoBox"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="Logo" type="TextureRect" parent="Intro/LogoBox/VBox"]
+custom_minimum_size = Vector2(320, 320)
+layout_mode = 2
+texture = ExtResource("4_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TeamName" type="Label" parent="Intro/LogoBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 48
+text = "Tres Games"
+horizontal_alignment = 1

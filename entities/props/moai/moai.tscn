@@ -1,23 +1,21 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://beaesrino3umx"]
 
-[ext_resource type="Script" path="res://entities/props/PlaceableObject.gd" id="1_placeable"]
-[ext_resource type="Texture2D" path="res://entities/props/moai/moai.png" id="2_tex"]
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_moai"]
-atlas = ExtResource("2_tex")
-region = Rect2(380, 480, 607, 888)
+[ext_resource type="Script" uid="uid://dy2crwglwcjxs" path="res://entities/props/PlaceableObject.gd" id="1_placeable"]
+[ext_resource type="Texture2D" uid="uid://djojbp481uf78" path="res://entities/props/moai/moai.png" id="2_tex"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_moai"]
 friction = 0.9
 bounce = 0.05
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_moai"]
-size = Vector2(134, 196)
+size = Vector2(120.01663, 192)
 
-[node name="Moai" type="RigidBody2D"]
+[node name="Moai" type="RigidBody2D" unique_id=482706583]
 mass = 80.0
 physics_material_override = SubResource("PhysicsMaterial_moai")
 script = ExtResource("1_placeable")
+prop_id = "moai"
+object_name = "Moái"
 anchored = false
 breakable = true
 break_impulse = 2600.0
@@ -25,12 +23,13 @@ material_id = "stone_shards"
 material_amount = 3
 debris_count = 9
 debris_colour = Color(0.42, 0.4, 0.38, 1)
-prop_id = "moai"
-object_name = "Moái"
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1117237749]
+rotation = -0.017453292
 scale = Vector2(0.22, 0.22)
-texture = SubResource("AtlasTexture_moai")
+texture = ExtResource("2_tex")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=405524129]
+position = Vector2(0.00045728683, -0.026174612)
+rotation = 0.017453292
 shape = SubResource("RectangleShape2D_moai")

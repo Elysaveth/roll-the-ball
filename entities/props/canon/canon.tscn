@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://2f6qptu2tacb"]
+
+[ext_resource type="Script" uid="uid://ceyn04vhd0f2j" path="res://entities/props/Launcher.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://ddy6mcjnabn71" path="res://entities/props/canon/canon.png" id="2_tex"]
+
+[sub_resource type="ConvexPolygonShape2D" id="ConvexPolygonShape2D_l3twg"]
+points = PackedVector2Array(81, -57, 88, -11, 28, 5, 33, 38, 3, 62, -26, 45, -33, 20, -71, 12, -81, -20, -50, -46)
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_almp7"]
+radius = 58.217823
+height = 196.95676
+
+[node name="Canon" type="RigidBody2D" unique_id=2027116182]
+mass = 60.0
+script = ExtResource("1_script")
+launch_impulse = 2400.0
+cooldown_seconds = 0.5
+prop_id = "canon"
+object_name = "Cannon"
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1679618128]
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("2_tex")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1709410421]
+shape = SubResource("ConvexPolygonShape2D_l3twg")
+
+[node name="Trigger" type="Area2D" parent="." unique_id=398163127]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger" unique_id=2102442440]
+position = Vector2(11.000001, -5.0000005)
+rotation = 1.3962634
+shape = SubResource("CapsuleShape2D_almp7")

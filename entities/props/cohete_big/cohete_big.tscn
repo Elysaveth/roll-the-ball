@@ -1,46 +1,41 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://bkcr8s6mm7bf6"]
 
-[ext_resource type="Script" path="res://entities/props/Rocket.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://entities/props/cohete_big/cohete_big.png" id="2_tex"]
-[ext_resource type="PackedScene" path="res://entities/effects/explosion/explosion.tscn" id="3_boom"]
+[ext_resource type="Script" uid="uid://ctvutk68kd6qr" path="res://entities/props/Rocket.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bn8a8p1gh5ubx" path="res://entities/props/cohete_big/cohete_big.png" id="2_tex"]
+[ext_resource type="PackedScene" uid="uid://cn6o62nqfp2vt" path="res://entities/effects/explosion/explosion.tscn" id="3_boom"]
 
-[sub_resource type="AtlasTexture" id="Atlas_main"]
-atlas = ExtResource("2_tex")
-region = Rect2(563, 832, 270, 300)
+[sub_resource type="ConvexPolygonShape2D" id="ConvexPolygonShape2D_hva3r"]
+points = PackedVector2Array(39, -52, 49, 16, 28, 52, 0, 8, -46, 2, -24, -35)
 
-[sub_resource type="RectangleShape2D" id="Shape_body"]
-size = Vector2(84, 96)
+[sub_resource type="ConvexPolygonShape2D" id="ConvexPolygonShape2D_s1abj"]
+points = PackedVector2Array(232, -18, 220, -84, 154, -67, 130, -26, 165, 0, 206, 25)
 
-[sub_resource type="CircleShape2D" id="Shape_trigger"]
-radius = 64.0
-
-[node name="CoheteBig" type="RigidBody2D"]
-script = ExtResource("1_script")
+[node name="CoheteBig" type="RigidBody2D" unique_id=1268318280]
 mass = 9.0
-prop_id = "cohete_big"
-object_name = "Big rocket"
+script = ExtResource("1_script")
+ignite_delay = 0.5
 thrust_gravities = 3.2
 burn_seconds = 1.5
-thrust_direction = Vector2(0, -1)
-explosion_scene = ExtResource("3_boom")
-explosion_radius = 280.0
-explosion_force = 1900.0
-ignite_mode = 2
-ignite_delay = 0.5
 wobble_torque = 1.2
+explosion_scene = ExtResource("3_boom")
 explode_on_burnout = true
 explode_on_impact = true
 impact_impulse = 900.0
+explosion_radius = 280.0
+explosion_force = 1900.0
 shake_strength = 14.0
+prop_id = "cohete_big"
+object_name = "Big rocket"
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1606664303]
 scale = Vector2(0.34, 0.34)
-texture = SubResource("Atlas_main")
+texture = ExtResource("2_tex")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("Shape_body")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=21206969]
+shape = SubResource("ConvexPolygonShape2D_hva3r")
 
-[node name="Trigger" type="Area2D" parent="."]
+[node name="Trigger" type="Area2D" parent="." unique_id=1136912163]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
-shape = SubResource("Shape_trigger")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger" unique_id=1746927818]
+position = Vector2(-179, 30)
+shape = SubResource("ConvexPolygonShape2D_s1abj")

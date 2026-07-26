@@ -1,42 +1,40 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://cykuf3l0isvxv"]
 
-[ext_resource type="Script" path="res://entities/props/Explosive.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://entities/props/dinamita/dinamita.png" id="2_tex"]
-[ext_resource type="PackedScene" path="res://entities/effects/explosion/explosion.tscn" id="3_boom"]
-
-[sub_resource type="AtlasTexture" id="Atlas_main"]
-atlas = ExtResource("2_tex")
-region = Rect2(608, 870, 264, 268)
+[ext_resource type="Script" uid="uid://k7vs1as44mx2" path="res://entities/props/Explosive.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://5id7lrxup25p" path="res://entities/props/dinamita/dinamita.png" id="2_tex"]
+[ext_resource type="PackedScene" uid="uid://cn6o62nqfp2vt" path="res://entities/effects/explosion/explosion.tscn" id="3_boom"]
 
 [sub_resource type="RectangleShape2D" id="Shape_body"]
-size = Vector2(78, 80)
+size = Vector2(33.23402, 81.31729)
 
-[sub_resource type="CircleShape2D" id="Shape_trigger"]
-radius = 64.0
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_fxw3b"]
+radius = 19.076635
+height = 106.12391
 
-[node name="Dinamita" type="RigidBody2D"]
-script = ExtResource("1_script")
+[node name="Dinamita" type="RigidBody2D" unique_id=1256195564]
 mass = 6.0
-prop_id = "dinamita"
-object_name = "Dynamite"
+script = ExtResource("1_script")
+fuse_seconds = 1.0
 explosion_scene = ExtResource("3_boom")
 blast_radius = 300.0
 blast_force = 2100.0
-fuse_seconds = 1.0
 break_power = 1.6
 shake_strength = 18.0
-trigger_mode = 0
-arm_delay = 0.4
-chain_reaction = true
+prop_id = "dinamita"
+object_name = "Dynamite"
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1213235598]
 scale = Vector2(0.32, 0.32)
-texture = SubResource("Atlas_main")
+texture = ExtResource("2_tex")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2076623118]
+position = Vector2(-4.500003, 5.000001)
+rotation = 0.80285144
+scale = Vector2(0.9999999, 0.9999999)
 shape = SubResource("Shape_body")
 
-[node name="Trigger" type="Area2D" parent="."]
+[node name="Trigger" type="Area2D" parent="." unique_id=1537139866]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
-shape = SubResource("Shape_trigger")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger" unique_id=739876345]
+rotation = 0.80285144
+shape = SubResource("CapsuleShape2D_fxw3b")

@@ -1,42 +1,38 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://dpj8l32ep5pil"]
 
-[ext_resource type="Script" path="res://entities/props/Explosive.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://entities/props/tntminecraft/tntminecraft.png" id="2_tex"]
-[ext_resource type="PackedScene" path="res://entities/effects/explosion/explosion.tscn" id="3_boom"]
-
-[sub_resource type="AtlasTexture" id="Atlas_main"]
-atlas = ExtResource("2_tex")
-region = Rect2(410, 29, 1104, 1017)
+[ext_resource type="Script" uid="uid://k7vs1as44mx2" path="res://entities/props/Explosive.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://b8h47hs44yks2" path="res://entities/props/tntminecraft/tntminecraft.png" id="2_tex"]
+[ext_resource type="PackedScene" uid="uid://cn6o62nqfp2vt" path="res://entities/effects/explosion/explosion.tscn" id="3_boom"]
 
 [sub_resource type="RectangleShape2D" id="Shape_body"]
 size = Vector2(140, 130)
 
-[sub_resource type="CircleShape2D" id="Shape_trigger"]
-radius = 90.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_pcc1m"]
+size = Vector2(143, 132)
 
-[node name="Tnt" type="RigidBody2D"]
-script = ExtResource("1_script")
+[node name="Tnt" type="RigidBody2D" unique_id=903776624]
 mass = 12.0
-prop_id = "tntminecraft"
-object_name = "TNT"
+script = ExtResource("1_script")
+trigger_mode = 2
+arm_delay = 1.5
+fuse_seconds = 0.6
 explosion_scene = ExtResource("3_boom")
 blast_radius = 440.0
 blast_force = 3200.0
-fuse_seconds = 0.6
 break_power = 2.5
 shake_strength = 28.0
-trigger_mode = 2
-arm_delay = 1.5
-chain_reaction = true
+prop_id = "tntminecraft"
+object_name = "TNT"
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1969135966]
 scale = Vector2(0.13, 0.13)
-texture = SubResource("Atlas_main")
+texture = ExtResource("2_tex")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1425689341]
 shape = SubResource("Shape_body")
 
-[node name="Trigger" type="Area2D" parent="."]
+[node name="Trigger" type="Area2D" parent="." unique_id=663362472]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
-shape = SubResource("Shape_trigger")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger" unique_id=1097404610]
+position = Vector2(0.5, 0)
+shape = SubResource("RectangleShape2D_pcc1m")

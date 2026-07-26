@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dkjyhefqbosj7"]
 
-[ext_resource type="Script" uid="uid://csfwaye4ifnln" path="res://entities/props/ball/Ball.gd" id="1_ball"]
-[ext_resource type="Texture2D" uid="uid://b17pcopq0k3w" path="res://entities/props/ball/ball.png" id="2_tex"]
+[ext_resource type="Script" uid="uid://csfwaye4ifnln" path="res://entities/ball/Ball.gd" id="1_ball"]
+[ext_resource type="Texture2D" uid="uid://b17pcopq0k3w" path="res://entities/ball/ball.png" id="2_tex"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_ball"]
 friction = 0.4
