@@ -3,14 +3,16 @@
 [ext_resource type="Script" uid="uid://ctvutk68kd6qr" path="res://entities/props/Rocket.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://dslsgv86yq37a" path="res://entities/props/cohete_little/cohete_little.png" id="2_tex"]
 
-[sub_resource type="RectangleShape2D" id="Shape_body"]
-size = Vector2(31.306225, 84.788185)
+[sub_resource type="ConvexPolygonShape2D" id="ConvexPolygonShape2D_x2o33"]
+points = PackedVector2Array(-1.2952676, -55.768116, 16.704733, -21.768116, 14.704733, 41.231884, -15.295267, 42.231884, -21.295267, -20.768116)
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_nm8cv"]
-radius = 19.415773
+radius = 20.0
 height = 109.77657
 
 [node name="CoheteLittle" type="RigidBody2D" unique_id=597234808]
+position = Vector2(3, 5)
+rotation = -0.61086524
 mass = 4.0
 script = ExtResource("1_script")
 ignite_mode = 0
@@ -28,11 +30,11 @@ texture = ExtResource("2_tex")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=118058483]
 position = Vector2(2.5060277, -8.294536)
 rotation = 0.61086524
-shape = SubResource("Shape_body")
+shape = SubResource("ConvexPolygonShape2D_x2o33")
 
 [node name="Trigger" type="Area2D" parent="." unique_id=1195990435]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger" unique_id=1538635243]
-position = Vector2(4, -11)
+position = Vector2(3.6063092, -12.12413)
 rotation = 0.61086524
 shape = SubResource("CapsuleShape2D_nm8cv")

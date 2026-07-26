@@ -11,6 +11,8 @@ points = PackedVector2Array(39, -52, 49, 16, 28, 52, 0, 8, -46, 2, -24, -35)
 points = PackedVector2Array(232, -18, 220, -84, 154, -67, 130, -26, 165, 0, 206, 25)
 
 [node name="CoheteBig" type="RigidBody2D" unique_id=1268318280]
+position = Vector2(-5, 5)
+rotation = -0.57595867
 mass = 9.0
 script = ExtResource("1_script")
 ignite_delay = 0.5
