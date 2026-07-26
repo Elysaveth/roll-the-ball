@@ -1,12 +1,12 @@
-[gd_scene format=3 uid="uid://bkqqe1cs6siyw"]
+[gd_scene format=3 uid="uid://er4dy8wxkc3q"]
 
-[ext_resource type="Script" uid="uid://cwpm71oi6dntd" path="res://levels/Level.gd" id="1_g12vx"]
-[ext_resource type="PackedScene" uid="uid://unbcj1qx7p2p" path="res://entities/props/hielo/hielo.tscn" id="2_u2w5y"]
-[ext_resource type="PackedScene" uid="uid://beaesrino3umx" path="res://entities/props/moai/moai.tscn" id="3_ufdke"]
-[ext_resource type="PackedScene" uid="uid://dskgo0flewh42" path="res://entities/props/pinball/pinball.tscn" id="4_yncwd"]
-[ext_resource type="PackedScene" uid="uid://dpn38ghijay6e" path="res://entities/props/bomb/bomb.tscn" id="5_ulugv"]
-[ext_resource type="PackedScene" uid="uid://dkjyhefqbosj7" path="res://entities/ball/ball.tscn" id="6_0at4l"]
-[ext_resource type="Script" uid="uid://depun3jsxl11e" path="res://levels/Goal.gd" id="7_7xn8u"]
+[ext_resource type="Script" uid="uid://cwpm71oi6dntd" path="res://levels/Level.gd" id="1_i3dki"]
+[ext_resource type="PackedScene" path="res://entities/props/hielo/hielo.tscn" id="2_4krl6"]
+[ext_resource type="PackedScene" path="res://entities/props/moai/moai.tscn" id="3_mjgir"]
+[ext_resource type="PackedScene" path="res://entities/props/pinball/pinball.tscn" id="4_3k080"]
+[ext_resource type="PackedScene" path="res://entities/props/bomb/bomb.tscn" id="5_xs6mv"]
+[ext_resource type="PackedScene" uid="uid://dkjyhefqbosj7" path="res://entities/props/ball/ball.tscn" id="6_rfe46"]
+[ext_resource type="Script" uid="uid://depun3jsxl11e" path="res://levels/Goal.gd" id="7_l6hoh"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_stone"]
 friction = 0.6
@@ -27,18 +27,17 @@ size = Vector2(20, 160)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_goal"]
 size = Vector2(260, 110)
 
-[node name="Level02" type="Node2D" unique_id=683948185]
-position = Vector2(0, 2)
-script = ExtResource("1_g12vx")
-available_props = Array[PackedScene]([ExtResource("2_u2w5y"), ExtResource("3_ufdke"), ExtResource("4_yncwd"), ExtResource("5_ulugv")])
-ball_scene = ExtResource("6_0at4l")
+[node name="Level03" type="Node2D" unique_id=683948185]
+script = ExtResource("1_i3dki")
+available_props = Array[PackedScene]([ExtResource("2_4krl6"), ExtResource("3_mjgir"), ExtResource("4_3k080"), ExtResource("5_xs6mv")])
+ball_scene = ExtResource("6_rfe46")
 display_name = "Primer rodaje"
 
 [node name="Geometry" type="Node2D" parent="." unique_id=1992844820]
 
 [node name="LeftLedge" type="StaticBody2D" parent="Geometry" unique_id=2100280660]
-position = Vector2(889, 191.00002)
-rotation = 0.45
+position = Vector2(1087, 268)
+rotation = 0.19795917
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/LeftLedge" unique_id=280177779]
@@ -60,7 +59,7 @@ polygon = PackedVector2Array(-1300, -30, 1300, -30, 1300, 30, -1300, 30)
 shape = SubResource("RectangleShape2D_floor")
 
 [node name="BasketFloor" type="StaticBody2D" parent="Geometry" unique_id=939461767]
-position = Vector2(909, 953)
+position = Vector2(235, 978)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketFloor" unique_id=1944247244]
@@ -71,7 +70,7 @@ polygon = PackedVector2Array(-150, -20, 150, -20, 150, 20, -150, 20)
 shape = SubResource("RectangleShape2D_basket_floor")
 
 [node name="BasketWallLeft" type="StaticBody2D" parent="Geometry" unique_id=1350323810]
-position = Vector2(769, 855)
+position = Vector2(95, 880)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketWallLeft" unique_id=142554377]
@@ -82,7 +81,7 @@ polygon = PackedVector2Array(-10, -80, 10, -80, 10, 80, -10, 80)
 shape = SubResource("RectangleShape2D_basket_wall")
 
 [node name="BasketWallRight" type="StaticBody2D" parent="Geometry" unique_id=1955890795]
-position = Vector2(1049, 855)
+position = Vector2(375, 880)
 physics_material_override = SubResource("PhysicsMaterial_stone")
 
 [node name="Polygon2D" type="Polygon2D" parent="Geometry/BasketWallRight" unique_id=1917027972]
@@ -93,11 +92,11 @@ polygon = PackedVector2Array(-10, -80, 10, -80, 10, 80, -10, 80)
 shape = SubResource("RectangleShape2D_basket_wall")
 
 [node name="BallSpawn" type="Marker2D" parent="." unique_id=969515238]
-position = Vector2(812, 81)
+position = Vector2(986, 174)
 
 [node name="Goal" type="Area2D" parent="." unique_id=1959783321]
-position = Vector2(911, 884)
-script = ExtResource("7_7xn8u")
+position = Vector2(237, 909)
+script = ExtResource("7_l6hoh")
 
 [node name="Polygon2D" type="Polygon2D" parent="Goal" unique_id=708323952]
 color = Color(0.35, 0.85, 0.45, 0.25)
