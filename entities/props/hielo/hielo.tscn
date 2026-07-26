@@ -20,6 +20,7 @@ physics_material_override = SubResource("PhysicsMaterial_hielo")
 script = ExtResource("1_placeable")
 prop_id = "hielo"
 object_name = "Hielo"
+exclusive_placement = false
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.5, 0.5)

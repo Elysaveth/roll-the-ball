@@ -60,6 +60,7 @@ enum Mode {
 const LEVEL_PATH_TEMPLATE: String = "res://levels/level_%02d/level_%02d.tscn"
 const MAIN_SCENE: String = "res://levels/main.tscn"
 const LEVEL_SELECT_SCENE: String = "res://ui/menus/level_select/LevelSelect.tscn"
+const MAIN_MENU_SCENE: String = "res://ui/menus/main_menu/MainMenu.tscn"
 
 var current_mode: Mode = Mode.EDIT
 ## 0 means "no level loaded" (in a menu).
@@ -152,6 +153,22 @@ func _enter_level(level_id: int) -> void:
 
 
 func return_to_level_select() -> void:
+	go_to_level_select()
+
+
+func go_to_level_select() -> void:
+	_leave_level()
+	get_tree().change_scene_to_file(LEVEL_SELECT_SCENE)
+
+
+func go_to_main_menu() -> void:
+	_leave_level()
+	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+
+
+## Tears down whatever level is loaded and returns to a menu-safe state. Always
+## run before a scene swap out of gameplay.
+func _leave_level() -> void:
 	if current_level_id > 0:
 		_persist_layout()
 		SignalBus.level_exited.emit(current_level_id)
@@ -165,7 +182,6 @@ func return_to_level_select() -> void:
 	# Back to EDIT before the scene swap so the physics server is guaranteed
 	# active again — leaving it off would silently freeze the next level.
 	_set_mode(Mode.EDIT)
-	get_tree().change_scene_to_file(LEVEL_SELECT_SCENE)
 
 
 func restart_level() -> void:
@@ -286,7 +302,14 @@ func _set_mode(mode: Mode) -> void:
 		return
 	current_mode = mode
 	# Derived from the mode every single time, so the two can never desync.
-	PhysicsServer2D.set_active(mode == Mode.EDIT or mode == Mode.PLAY)
+	var should_simulate: bool = mode == Mode.EDIT or mode == Mode.PLAY
+	if Engine.is_in_physics_frame():
+		# Can't switch the server off from inside its own step (a Goal overlap,
+		# an area trigger). SimulatedBody defers its side of this for the same
+		# reason — see the comment on SimulatedBody._apply_mode.
+		PhysicsServer2D.set_active.call_deferred(should_simulate)
+	else:
+		PhysicsServer2D.set_active(should_simulate)
 	SignalBus.mode_changed.emit(current_mode)
 
 

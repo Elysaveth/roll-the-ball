@@ -67,11 +67,7 @@ func explode() -> void:
 	var epicentre: Vector2 = global_position
 	_spawn_effect(epicentre)
 	_apply_blast(epicentre)
-
-	# Detach before freeing so a LevelLayout.capture() this frame can't see it.
-	if get_parent() != null:
-		get_parent().remove_child(self)
-	queue_free()
+	detach_and_free()
 
 
 func _spawn_effect(at: Vector2) -> void:

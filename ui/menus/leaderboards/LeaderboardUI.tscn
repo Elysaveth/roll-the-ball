@@ -1,38 +1,32 @@
 [gd_scene load_steps=2 format=3 uid="uid://dx6kyoahohl4c"]
 
-[ext_resource type="Script" uid="uid://m55th6bompa8" path="res://ui/menus/leaderboards/LeaderboardUI.gd" id="1_c3ivn"]
+[ext_resource type="Script" path="res://ui/menus/leaderboards/LeaderboardUI.gd" id="1_c3ivn"]
 
-[node name="LeaderboardUI" type="Control"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="LeaderboardPanel" type="PanelContainer"]
+custom_minimum_size = Vector2(460, 300)
 script = ExtResource("1_c3ivn")
 
-[node name="Panel" type="Panel" parent="."]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="Title" type="Label" parent="Panel/VBoxContainer"]
+[node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 2
+theme_override_constants/separation = 10
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer"]
+[node name="TitleLabel" type="Label" parent="VBox"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 26
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "LB_LOADING"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="ScoreList" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer"]
+[node name="ScoreList" type="VBoxContainer" parent="VBox/ScrollContainer"]
 layout_mode = 2
-
-[node name="LoadingLable" type="Label" parent="Panel/VBoxContainer"]
-layout_mode = 2
-
-[node name="Close" type="Button" parent="Panel/VBoxContainer"]
-layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4

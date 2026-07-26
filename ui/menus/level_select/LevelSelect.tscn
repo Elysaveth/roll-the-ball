@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://cp5mddf6lxjch"]
+[gd_scene load_steps=3 format=3 uid="uid://cp5mddf6lxjch"]
 
 [ext_resource type="Script" path="res://ui/menus/level_select/LevelSelect.gd" id="1_o3vui"]
+[ext_resource type="PackedScene" path="res://ui/menus/leaderboards/LeaderboardUI.tscn" id="2_leaderboard"]
 
 [node name="LevelSelect" type="Control"]
 layout_mode = 3
@@ -24,15 +25,33 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 24
 
-[node name="Title" type="Label" parent="VBoxContainer"]
+[node name="Header" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="VBoxContainer/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 48
-text = "Selecciona nivel"
+text = "SELECT_TITLE"
+vertical_alignment = 1
+
+[node name="LeaderboardButton" type="Button" parent="VBoxContainer/Header"]
+custom_minimum_size = Vector2(200, 56)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SELECT_LEADERBOARD"
+
+[node name="BackButton" type="Button" parent="VBoxContainer/Header"]
+custom_minimum_size = Vector2(180, 56)
+layout_mode = 2
+size_flags_vertical = 4
+text = "SELECT_BACK"
 
 [node name="BankLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "Banco de tiempo: 60.00s de 60.00s"
+text = "SELECT_BANK"
 
 [node name="GridContainer" type="GridContainer" parent="VBoxContainer"]
 layout_mode = 2
@@ -40,3 +59,33 @@ size_flags_vertical = 3
 theme_override_constants/h_separation = 16
 theme_override_constants/v_separation = 16
 columns = 5
+
+[node name="LeaderboardOverlay" type="Panel" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Center" type="CenterContainer" parent="LeaderboardOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="LeaderboardOverlay/Center"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Leaderboard" parent="LeaderboardOverlay/Center/VBox" instance=ExtResource("2_leaderboard")]
+custom_minimum_size = Vector2(560, 460)
+layout_mode = 2
+
+[node name="CloseButton" type="Button" parent="LeaderboardOverlay/Center/VBox"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+text = "LB_CLOSE"

@@ -11,13 +11,13 @@ func setup(level_id: int, unlocked: bool, best_time: float) -> void:
 	if not unlocked:
 		text = str(level_id)
 		modulate = Color(0.5, 0.5, 0.5, 0.8)
-		tooltip_text = "Bloqueado"
+		tooltip_text = tr("SELECT_LOCKED")
 		return
 
 	modulate = Color.WHITE
 	if best_time < 0.0:
 		text = str(level_id)
-		tooltip_text = "Sin completar"
+		tooltip_text = tr("SELECT_NOT_COMPLETED")
 	else:
 		text = "%d\n%.2fs" % [level_id, best_time]
-		tooltip_text = "Récord: %.2fs — mejóralo para recuperar segundos" % best_time
+		tooltip_text = tr("SELECT_RECORD") % ("%.2fs" % best_time)

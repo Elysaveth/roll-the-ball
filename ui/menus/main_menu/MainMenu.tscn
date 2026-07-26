@@ -1,0 +1,77 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/menus/main_menu/MainMenu.gd" id="1_mainmenu"]
+[ext_resource type="PackedScene" path="res://ui/menus/settings/SettingsMenu.tscn" id="2_settings"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mainmenu")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(620, 0)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 56
+text = "APP_TITLE"
+horizontal_alignment = 1
+
+[node name="Prompt" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "MENU_NAME_PROMPT"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="NameField" type="LineEdit" parent="Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+placeholder_text = "MENU_NAME_PLACEHOLDER"
+alignment = 1
+caret_blink = true
+
+[node name="HintLabel" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.55, 0.35, 1)
+theme_override_font_sizes/font_size = 18
+text = "MENU_NAME_REQUIRED"
+horizontal_alignment = 1
+
+[node name="PlayButton" type="Button" parent="Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+disabled = true
+text = "MENU_PLAY"
+
+[node name="SettingsButton" type="Button" parent="Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "SETTINGS_TITLE"
+
+[node name="QuitButton" type="Button" parent="Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "MENU_QUIT"
+
+[node name="SettingsMenu" parent="." instance=ExtResource("2_settings")]
+visible = false
+layout_mode = 1

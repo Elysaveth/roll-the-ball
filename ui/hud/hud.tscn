@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://ui/hud/HUDController.gd" id="1_hud"]
+[ext_resource type="PackedScene" path="res://ui/menus/leaderboards/LeaderboardUI.tscn" id="2_leaderboard"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -29,17 +30,17 @@ theme_override_constants/separation = 16
 [node name="BackButton" type="Button" parent="Root/TopBar"]
 custom_minimum_size = Vector2(120, 56)
 layout_mode = 2
-text = "Volver"
+text = "HUD_BACK"
 
 [node name="PlayButton" type="Button" parent="Root/TopBar"]
 custom_minimum_size = Vector2(140, 56)
 layout_mode = 2
-text = "Play"
+text = "HUD_PLAY"
 
 [node name="PauseButton" type="Button" parent="Root/TopBar"]
 custom_minimum_size = Vector2(140, 56)
 layout_mode = 2
-text = "Pausa"
+text = "HUD_PAUSE"
 
 [node name="TimeLabel" type="Label" parent="Root/TopBar"]
 custom_minimum_size = Vector2(200, 56)
@@ -52,7 +53,7 @@ vertical_alignment = 1
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
-text = "Sin récord"
+text = "HUD_NO_RECORD"
 vertical_alignment = 1
 
 [node name="Palette" type="PanelContainer" parent="Root"]
@@ -71,6 +72,8 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 alignment = 1
 
+[node name="PropMenu" type="PopupMenu" parent="Root"]
+
 [node name="ResultPanel" type="PanelContainer" parent="Root"]
 layout_mode = 1
 anchors_preset = 8
@@ -78,10 +81,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -340.0
-offset_top = -190.0
-offset_right = 340.0
-offset_bottom = 190.0
+offset_left = -420.0
+offset_top = -330.0
+offset_right = 420.0
+offset_bottom = 330.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -92,7 +95,7 @@ theme_override_constants/separation = 20
 [node name="ResultTitle" type="Label" parent="Root/ResultPanel/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 40
-text = "¡A la cesta!"
+text = "RESULT_COMPLETED"
 horizontal_alignment = 1
 
 [node name="ResultDetail" type="Label" parent="Root/ResultPanel/VBox"]
@@ -103,6 +106,10 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
+[node name="Leaderboard" parent="Root/ResultPanel/VBox" instance=ExtResource("2_leaderboard")]
+layout_mode = 2
+size_flags_vertical = 3
+
 [node name="Buttons" type="HBoxContainer" parent="Root/ResultPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 16
@@ -111,19 +118,19 @@ alignment = 1
 [node name="ResumeButton" type="Button" parent="Root/ResultPanel/VBox/Buttons"]
 custom_minimum_size = Vector2(150, 56)
 layout_mode = 2
-text = "Reanudar"
+text = "HUD_RESUME"
 
 [node name="EditButton" type="Button" parent="Root/ResultPanel/VBox/Buttons"]
 custom_minimum_size = Vector2(150, 56)
 layout_mode = 2
-text = "Editar"
+text = "HUD_EDIT"
 
 [node name="NextButton" type="Button" parent="Root/ResultPanel/VBox/Buttons"]
 custom_minimum_size = Vector2(180, 56)
 layout_mode = 2
-text = "Siguiente nivel"
+text = "HUD_NEXT_LEVEL"
 
 [node name="SelectButton" type="Button" parent="Root/ResultPanel/VBox/Buttons"]
 custom_minimum_size = Vector2(150, 56)
 layout_mode = 2
-text = "Niveles"
+text = "HUD_LEVELS"

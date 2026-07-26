@@ -1,0 +1,47 @@
+keys,en,es
+APP_TITLE,Roll the ball,Roll the ball
+MENU_NAME_PROMPT,Enter your name for the leaderboards,Escribe tu nombre para las tablas de puntuaciones
+MENU_NAME_PLACEHOLDER,Your name,Tu nombre
+MENU_NAME_REQUIRED,A name is required to play.,Hace falta un nombre para poder jugar.
+MENU_PLAY,Play,Jugar
+MENU_QUIT,Quit,Salir
+SELECT_TITLE,Select level,Selecciona nivel
+SELECT_BACK,Main menu,Menú principal
+SELECT_LEADERBOARD,Leaderboards,Puntuaciones
+SELECT_BANK,%s  ·  Time bank: %s of %s,%s  ·  Banco de tiempo: %s de %s
+SELECT_LOCKED,Locked,Bloqueado
+SELECT_NOT_COMPLETED,Not completed,Sin completar
+SELECT_RECORD,Record: %s — beat it to win seconds back,Récord: %s — mejóralo para recuperar segundos
+HUD_BACK,Back,Volver
+HUD_PLAY,Play,Play
+HUD_EDIT,Edit,Editar
+HUD_PAUSE,Pause,Pausa
+HUD_RESUME,Resume,Reanudar
+HUD_NEXT_LEVEL,Next level,Siguiente nivel
+HUD_LEVELS,Levels,Niveles
+HUD_NO_RECORD,No record  ·  Bank %s,Sin récord  ·  Banco %s
+HUD_RECORD,Record %s  ·  Bank %s,Récord %s  ·  Banco %s
+RESULT_COMPLETED,In the basket!,¡A la cesta!
+RESULT_TIME_UP,Out of time,Se acabó el tiempo
+RESULT_PAUSED,Paused,En pausa
+RESULT_TIME,Time: %s,Tiempo: %s
+RESULT_REFUND,You won back %s for the bank.,Has recuperado %s para el banco.
+RESULT_SPENT,You spent %s from the bank.,Has gastado %s del banco.
+RESULT_NO_IMPROVEMENT,No improvement on your record: the bank is unchanged.,No has mejorado tu récord: el banco no cambia.
+RESULT_BANK_LEFT,Bank remaining: %s,Banco restante: %s
+RESULT_TIME_UP_DETAIL,The bank is empty. Look at how the level ended and then go back to editing.,El banco está a cero. Observa cómo ha quedado el nivel y vuelve a editarlo.
+PROP_ROTATE,Rotate,Rotar
+PROP_RESIZE,Resize,Redimensionar
+PROP_DELETE,Delete,Eliminar
+LB_LOADING,Loading...,Cargando...
+LB_EMPTY,No scores yet,Todavía no hay puntuaciones
+LB_ERROR,Couldn't load the leaderboard (%s),No se pudo cargar la tabla (%s)
+LB_OFFLINE,Leaderboards are not configured.,Las tablas de puntuaciones no están configuradas.
+LB_LEVEL_TITLE,Level %d — best times,Nivel %d — mejores tiempos
+LB_GENERAL_TITLE,Furthest level reached,Nivel más lejano alcanzado
+LB_LEVEL_VALUE,Level %d,Nivel %d
+LB_CLOSE,Close,Cerrar
+SETTINGS_TITLE,Settings,Ajustes
+SETTINGS_LANGUAGE_EN,English,English
+SETTINGS_LANGUAGE_ES,Spanish,Español
+SETTINGS_FPS_UNCAPPED,Uncapped,Sin límite

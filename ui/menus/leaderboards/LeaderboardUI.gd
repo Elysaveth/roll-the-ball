@@ -1,58 +1,78 @@
-extends Control
-# Goes through LeaderboardApi + SignalBus rather than touching SilentWolf
-# directly. That's the point of the wrapper in globals/LeaderboardAPI.gd: the
-# backend can be swapped without any screen having to change.
+extends PanelContainer
+class_name LeaderboardPanel
+# A reusable leaderboard view. Embedded in the HUD's result panel to show the
+# current level's board when the ball lands, and shown standalone from the level
+# select for the general progress board.
 #
-# (The previous version awaited `SilentWolf.Scores.get_scores(10).sw_get_scores_complete`,
-# which awaits a property on a return value rather than a signal on the object,
-# and would never have resolved.)
+# Everything arrives through SignalBus, filtered on the board name — there is one
+# board per level plus `progress`, and they all report through the same signal.
+#
+# Goes through LeaderboardApi rather than touching SilentWolf directly, which is
+# the whole point of that wrapper.
 
 const SCORE_ROW: PackedScene = preload("res://ui/menus/leaderboards/ScoreRow.tscn")
 
-@onready var score_list: VBoxContainer = $Panel/VBoxContainer/ScrollContainer/ScoreList
-@onready var loading_label: Label = $Panel/VBoxContainer/LoadingLabel
+@onready var title_label: Label = $VBox/TitleLabel
+@onready var status_label: Label = $VBox/StatusLabel
+@onready var score_list: VBoxContainer = $VBox/ScrollContainer/ScoreList
+
+var _board: String = ""
+## One of LeaderboardApi.ValueFormat.
+var _format: int = LeaderboardApi.ValueFormat.SECONDS
 
 
 func _ready() -> void:
 	SignalBus.scores_received.connect(_on_scores_received)
 	SignalBus.scores_request_failed.connect(_on_scores_request_failed)
-	refresh_leaderboard()
 
 
-func refresh_leaderboard() -> void:
-	loading_label.text = "Cargando..."
-	loading_label.show()
+## Points the panel at a board and kicks off a fetch. Safe to call repeatedly —
+## a second call just replaces what's displayed.
+func show_board(board: String, title: String, format: int = LeaderboardApi.ValueFormat.SECONDS) -> void:
+	_board = board
+	_format = format
+	title_label.text = title
+	_clear_rows()
+
+	if not LeaderboardApi.is_configured():
+		_set_status("LB_OFFLINE")
+		return
+
+	_set_status("LB_LOADING")
+	LeaderboardApi.fetch_scores(_board)
+
+
+func _clear_rows() -> void:
 	for child in score_list.get_children():
 		score_list.remove_child(child)
 		child.queue_free()
-	LeaderboardApi.fetch_scores()
 
 
-func _on_scores_received(result: Variant) -> void:
-	loading_label.hide()
+func _set_status(key: String, args: Array = []) -> void:
+	status_label.text = tr(key) % args if not args.is_empty() else tr(key)
+	status_label.show()
 
-	var scores: Array = []
-	# SilentWolf hands back a dictionary with a "scores" array; guard anyway,
-	# since the exact payload shape varies between plugin versions.
-	if result is Dictionary and result.get("scores") is Array:
-		scores = result["scores"]
-	elif result is Array:
-		scores = result
+
+func _on_scores_received(board: String, scores: Array) -> void:
+	if board != _board:
+		return # another panel's request
+	_clear_rows()
 
 	if scores.is_empty():
-		loading_label.text = "Todavía no hay puntuaciones"
-		loading_label.show()
+		_set_status("LB_EMPTY")
 		return
+	status_label.hide()
 
-	for score_data in scores:
+	var rank: int = 1
+	for entry in scores:
 		var row: Node = SCORE_ROW.instantiate()
 		score_list.add_child(row)
-		row.setup(
-			str(score_data.get("player_name", "?")),
-			float(score_data.get("score", 0.0))
-		)
+		row.setup(rank, str(entry.get("player_name", "?")), float(entry.get("score", 0.0)), _format)
+		rank += 1
 
 
-func _on_scores_request_failed(error: String) -> void:
-	loading_label.text = "No se pudo cargar la tabla (%s)" % error
-	loading_label.show()
+func _on_scores_request_failed(board: String, error: String) -> void:
+	if board != _board:
+		return
+	_clear_rows()
+	_set_status("LB_ERROR", [error])

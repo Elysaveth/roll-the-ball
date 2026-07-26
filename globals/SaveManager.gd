@@ -63,6 +63,7 @@ const STARTING_PROPS: Array[String] = ["hielo", "moai", "pinball", "bomb"]
 func _default_profile() -> Dictionary:
 	return {
 		"profile_version": PROFILE_VERSION,
+		"player_name": "",       # required before playing; used for leaderboards
 		"time_bank": STARTING_BANK,
 		"highest_unlocked_level": 1,
 		"best_times": {},        # keys are level ids AS STRINGS — see _best_times()
@@ -70,6 +71,27 @@ func _default_profile() -> Dictionary:
 		"materials": {},         # material id -> count, for blueprint crafting later
 		"broken_counts": {},     # what the player has destroyed, feeds materials
 	}
+
+
+# ----------------------------------------------------------- player name ----
+# Collected by the main menu before the player can start, because a score with
+# no name attached is useless to a leaderboard.
+
+func get_player_name() -> String:
+	return str(_profile.get("player_name", ""))
+
+
+func has_player_name() -> bool:
+	return not get_player_name().is_empty()
+
+
+func set_player_name(value: String) -> void:
+	var trimmed: String = value.strip_edges()
+	if trimmed == get_player_name():
+		return
+	_profile["player_name"] = trimmed
+	save_profile()
+	SignalBus.player_name_changed.emit(trimmed)
 
 
 # ------------------------------------------------------------- time bank ----
@@ -133,6 +155,17 @@ func get_best_time(level_id: int) -> float:
 
 func has_completed(level_id: int) -> bool:
 	return get_best_time(level_id) >= 0.0
+
+
+## Highest level id the player has actually finished — what the general
+## leaderboard ranks on. 0 when they haven't cleared anything yet.
+func get_furthest_completed_level() -> int:
+	var furthest: int = 0
+	for key in _best_times():
+		var level_id: int = int(key)
+		if level_id > furthest:
+			furthest = level_id
+	return furthest
 
 
 func _best_times() -> Dictionary:

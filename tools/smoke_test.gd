@@ -39,15 +39,62 @@ func _run() -> void:
 	get_tree().root.add_child(_main)
 	await get_tree().process_frame
 
+	_test_input_actions_exist()
+	_test_hud_is_wired()
 	await _test_level_loads()
 	await _test_snapshot_restores_layout()
 	await _test_bank_charges_and_refunds()
 	await _test_time_up_freezes()
 	await _test_level_01_is_a_puzzle()
 	await _test_bomb_explodes()
+	await _test_goal_through_physics()
+	await _test_transforms_round_trip()
+	_test_scale_clamping()
+	_test_player_name()
+	_test_translations()
+	await _test_exclusive_placement()
+	await _test_cursor_resolution()
 
 
 # ----------------------------------------------------------------- tests ----
+
+## Every action the code calls by name has to exist in the InputMap, or the
+## feature is simply dead at runtime — a missing binding is not a crash, and
+## headless runs never press a key, so nothing else here would notice.
+func _test_input_actions_exist() -> void:
+	print("\n[input actions]")
+	for action in ["toggle_play", "toggle_pause", "rotate_prop", "scale_prop",
+			"camera_up", "camera_down", "camera_left", "camera_right"]:
+		var exists: bool = InputMap.has_action(action)
+		var bound: bool = exists and not InputMap.action_get_events(action).is_empty()
+		check(exists, "action '%s' is defined" % action)
+		check(bound, "action '%s' has a default binding" % action)
+
+
+## A parse error in HUDController silently detaches the script — the scene still
+## loads, the game still runs, and nothing in the world tests notices. So check
+## the HUD is really live, and that its @onready paths resolved against hud.tscn.
+func _test_hud_is_wired() -> void:
+	print("\n[HUD is wired]")
+	var hud: Node = _main.get_node_or_null("UI/HUD")
+	check(hud != null, "main.tscn has UI/HUD")
+	check(hud is HUDController, "HUDController is attached (a parse error would drop it)")
+	if not hud is HUDController:
+		return
+
+	var controller: HUDController = hud
+	check(controller.play_button != null, "PlayButton resolved")
+	check(controller.time_label != null, "TimeLabel resolved")
+	check(controller.palette_items != null, "PaletteItems resolved")
+	check(controller.prop_menu != null, "PropMenu resolved")
+	check(controller.result_panel != null, "ResultPanel resolved")
+	check(controller.leaderboard != null, "the embedded leaderboard panel resolved")
+	# Typed loosely to dodge the class cache, so confirm its script is really on.
+	check(
+		controller.leaderboard != null and controller.leaderboard.has_method("show_board"),
+		"the leaderboard panel's script is attached"
+	)
+
 
 func _test_level_loads() -> void:
 	print("\n[level loads]")
@@ -226,6 +273,251 @@ func _test_bomb_explodes() -> void:
 	check(effect_found, "the explosion effect outlives the bomb that spawned it")
 
 	GameManager.return_to_edit()
+
+
+## Scores by actually rolling the ball into the Goal, rather than calling
+## notify_goal_reached() by hand like the bank tests do.
+##
+## This is the path that used to spam "Can't change this state while flushing
+## queries": Goal.body_entered fires with the physics space locked, and switching
+## mode makes every body write `freeze`. Watch the run's stderr for that string —
+## reaching COMPLETED here is only half the check.
+func _test_goal_through_physics() -> void:
+	print("\n[goal reached through physics]")
+	LevelLayout.clear(GameManager.get_placed_objects_container())
+	SaveManager._set_time_bank(60.0)
+
+	var level: Level = GameManager.get_current_level()
+	var goal: Node2D = level.get_node_or_null("Goal")
+	if goal == null:
+		check(false, "level 01 has a Goal node")
+		return
+
+	# Cheat by moving the spawn marker rather than teleporting the ball. Level
+	# .reset_level() positions the ball while it is still frozen, which is the
+	# only reliable moment to place a RigidBody2D — once it's live the physics
+	# server owns its transform and overwrites any direct assignment.
+	var original_spawn: Vector2 = level.ball_spawn.position
+	level.ball_spawn.global_position = goal.global_position + Vector2(0, -140)
+
+	GameManager.start_attempt()
+	await get_tree().physics_frame
+	var ball: Ball = level.get_ball()
+
+	for i in range(240):
+		await get_tree().physics_frame
+		if GameManager.current_mode == GameManager.Mode.COMPLETED:
+			break
+
+	var area: Area2D = goal
+	check(
+		GameManager.current_mode == GameManager.Mode.COMPLETED,
+		"a real Goal overlap scores (ball %s, goal %s, monitoring=%s, overlaps=%d)" % [
+			ball.global_position, goal.global_position, area.monitoring,
+			area.get_overlapping_bodies().size()
+		]
+	)
+	level.ball_spawn.position = original_spawn
+	GameManager.return_to_edit()
+	check(GameManager.is_edit_mode(), "and the level goes back to EDIT afterwards")
+
+
+## Rotation and scale are part of the arrangement, so they have to survive the
+## snapshot round trip exactly like position does.
+func _test_transforms_round_trip() -> void:
+	print("\n[rotation and scale round trip]")
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+
+	var prop: PlaceableObject = load(PROP_SCENE).instantiate()
+	container.add_child(prop)
+	prop.global_position = Vector2(700, 600)
+	prop.rotation = 0.7
+	prop.set_uniform_scale(1.25)
+	var wanted_rotation: float = prop.rotation
+	var wanted_scale: float = prop.scale.x
+
+	GameManager.start_attempt()
+	# Scramble the live prop the way an explosion would.
+	var live: PlaceableObject = _first_prop(container)
+	live.rotation = -2.5
+	live.scale = Vector2(0.9, 0.9)
+
+	GameManager.return_to_edit()
+	await get_tree().process_frame
+
+	var restored: PlaceableObject = _first_prop(container)
+	check(restored != null, "the prop survived the round trip")
+	if restored == null:
+		return
+	check(
+		is_equal_approx(restored.rotation, wanted_rotation),
+		"rotation restored (%.3f, wanted %.3f)" % [restored.rotation, wanted_rotation]
+	)
+	check(
+		is_equal_approx(restored.scale.x, wanted_scale),
+		"scale restored (%.3f, wanted %.3f)" % [restored.scale.x, wanted_scale]
+	)
+
+
+func _test_scale_clamping() -> void:
+	print("\n[scale clamping]")
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+
+	var prop: PlaceableObject = load(PROP_SCENE).instantiate()
+	container.add_child(prop)
+
+	prop.set_uniform_scale(99.0)
+	check(prop.scale.x <= PlaceableObject.MAX_SCALE + 0.001, "resizing stops at MAX_SCALE (%.2f)" % prop.scale.x)
+	check(not prop.can_grow(), "can_grow() reports the ceiling")
+	check(is_equal_approx(prop.scale.x, prop.scale.y), "scale stays uniform")
+
+	prop.set_uniform_scale(0.001)
+	check(prop.scale.x >= PlaceableObject.MIN_SCALE - 0.001, "resizing stops at MIN_SCALE (%.2f)" % prop.scale.x)
+	check(not prop.can_shrink(), "can_shrink() reports the floor")
+
+	LevelLayout.clear(container)
+
+
+func _test_player_name() -> void:
+	print("\n[player name]")
+	check(not SaveManager.has_player_name(), "a fresh profile has no name yet")
+	SaveManager.set_player_name("   Lizzy   ")
+	check(SaveManager.get_player_name() == "Lizzy", "the name is trimmed on the way in")
+	check(SaveManager.has_player_name(), "has_player_name() flips once set")
+
+	SaveManager.load_profile()
+	check(SaveManager.get_player_name() == "Lizzy", "the name survives a profile reload")
+
+
+## Guards the localisation wiring. A missing translation resource doesn't crash —
+## tr() just hands the key straight back — so the UI silently renders
+## "MENU_PLAY" instead of "Play" and only a human notices.
+func _test_translations() -> void:
+	print("\n[translations]")
+	var locales: PackedStringArray = TranslationServer.get_loaded_locales()
+	check("en" in locales, "English is loaded (locales: %s)" % str(locales))
+	check("es" in locales, "Spanish is loaded")
+
+	var probes: Array[String] = ["MENU_PLAY", "HUD_EDIT", "RESULT_COMPLETED", "PROP_RESIZE", "LB_EMPTY"]
+	TranslationServer.set_locale("en")
+	for key in probes:
+		check(tr(key) != key, "'%s' resolves in English -> '%s'" % [key, tr(key)])
+	TranslationServer.set_locale("es")
+	check(tr("MENU_PLAY") == "Jugar", "Spanish translation applies (MENU_PLAY -> '%s')" % tr("MENU_PLAY"))
+
+	# English is the default, so leave it that way for anything downstream.
+	TranslationServer.set_locale("en")
+	check(Settings.LOCALES[0] == "en", "English is the first/default locale option")
+
+
+## Exclusive props must refuse to sit on top of each other, and the refusal has to
+## survive the drop — not just tint the cursor.
+func _test_exclusive_placement() -> void:
+	print("\n[exclusive placement]")
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+
+	var bomb_scene: PackedScene = load("res://entities/props/bomb/bomb.tscn")
+	var first: PlaceableObject = bomb_scene.instantiate()
+	container.add_child(first)
+	first.global_position = Vector2(700, 500)
+
+	var second: PlaceableObject = bomb_scene.instantiate()
+	container.add_child(second)
+	second.global_position = Vector2(700, 500) # right on top of the first
+	check(second.exclusive_placement, "bombs are exclusive by default")
+
+	# The probe's overlap list is populated by the physics server, so it needs a tick.
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(not second.placement_is_valid(), "stacked bombs report an invalid placement")
+
+	second.global_position = Vector2(1300, 500)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(second.placement_is_valid(), "moving clear of the other bomb makes it valid again")
+
+	# Ice planks are meant to be layered, so they must NOT block each other.
+	LevelLayout.clear(container)
+	var plank_a: PlaceableObject = load(PROP_SCENE).instantiate()
+	var plank_b: PlaceableObject = load(PROP_SCENE).instantiate()
+	container.add_child(plank_a)
+	container.add_child(plank_b)
+	plank_a.global_position = Vector2(700, 500)
+	plank_b.global_position = Vector2(700, 500)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(not plank_a.exclusive_placement, "ice planks opt out of exclusivity")
+	check(plank_b.placement_is_valid(), "overlapping planks are allowed")
+
+	LevelLayout.clear(container)
+
+
+## The cursor is derived from interaction state, so it can be checked without a
+## real mouse: drive the state and read the resolved shape.
+##
+## Note the dragged prop follows the cursor, and headless reports the cursor at the
+## viewport origin — so positions are taken FROM the prop rather than assigned to
+## it, and the blocker is moved to meet it.
+func _test_cursor_resolution() -> void:
+	print("
+[cursor resolution]")
+	var container: Node = GameManager.get_placed_objects_container()
+	LevelLayout.clear(container)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	check(
+		CursorManager._resolve() == CursorManager.SHAPE_DEFAULT,
+		"idle in EDIT resolves to the default arrow"
+	)
+
+	var bomb_scene: PackedScene = load("res://entities/props/bomb/bomb.tscn")
+	var moving: PlaceableObject = bomb_scene.instantiate()
+	container.add_child(moving)
+	moving.begin_drag_from_palette()
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(PlaceableObject.get_dragging() == moving, "the drag survived construction")
+	check(CursorManager._resolve() == CursorManager.SHAPE_DROP_OK, "dragging over free space shows can-drop")
+
+	# Put a second exclusive prop exactly where the dragged one now sits.
+	var blocker: PlaceableObject = bomb_scene.instantiate()
+	container.add_child(blocker)
+	blocker.global_position = moving.global_position
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(
+		CursorManager._resolve() == CursorManager.SHAPE_DROP_BLOCKED,
+		"dragging onto another exclusive prop shows forbidden"
+	)
+
+	# Dropping there is refused too, not just discouraged: a prop straight from the
+	# palette has nowhere to return to, so the placement is cancelled outright.
+	moving._drop()
+	await get_tree().process_frame
+	check(not is_instance_valid(moving), "an illegal drop from the palette cancels the placement")
+
+	# The blocker is sitting under the cursor, which is what grabbable means.
+	check(CursorManager._resolve() == CursorManager.SHAPE_GRABBABLE, "a prop under the cursor shows grabbable")
+
+	blocker.begin_rotate(true)
+	check(CursorManager._resolve() == CursorManager.SHAPE_ROTATING, "rotating shows the rotate shape")
+	blocker.cancel_rotate()
+
+	blocker.begin_scale(true)
+	check(CursorManager._resolve() == CursorManager.SHAPE_RESIZING, "resizing shows the resize shape")
+	blocker.cancel_scale()
+
+	check(
+		PlaceableObject.get_rotating() == null
+			and PlaceableObject.get_scaling() == null
+			and PlaceableObject.get_dragging() == null,
+		"all gesture state is cleared after cancelling"
+	)
+	LevelLayout.clear(container)
 
 
 # ---------------------------------------------------------------- helpers ----

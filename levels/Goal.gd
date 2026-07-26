@@ -15,5 +15,9 @@ func _ready() -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if body.is_in_group("ball"):
-		GameManager.notify_goal_reached()
+	if not body.is_in_group("ball"):
+		return
+	# Deferred because this fires from inside the physics step with the space
+	# locked, and scoring switches mode — which makes every body write `freeze`.
+	# Doing that mid-flush is refused by the engine.
+	GameManager.notify_goal_reached.call_deferred()

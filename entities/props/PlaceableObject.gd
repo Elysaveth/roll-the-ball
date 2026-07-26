@@ -2,9 +2,14 @@ extends SimulatedBody
 class_name PlaceableObject
 # Base class for anything the player can place on the canvas.
 #
-# In EDIT mode the body is frozen (SimulatedBody's job) and draggable with the
-# left mouse button; right-click removes it. In every other mode it belongs to
-# the physics engine and ignores input. Attach a CollisionShape2D as a child.
+# EDIT mode interactions:
+#   left-drag      move the prop
+#   right-click    open its context menu (rotate / resize / delete)
+#   hold rotate    aim the prop under the cursor with the mouse
+#   hold scale     resize the prop under the cursor with the mouse
+#
+# In every other mode the prop belongs to the physics engine and ignores input.
+# Attach a CollisionShape2D as a child.
 #
 # Requirement: save each prop type as its own root-level scene (.tscn) with this
 # script (or a subclass) on the root — LevelLayout records `scene_file_path` to
@@ -35,12 +40,51 @@ class_name PlaceableObject
 ## normally, so anchored props are fully solid; they just don't move.
 @export var anchored: bool = true
 
+## Exclusive props refuse to be dropped on top of each other, so the player can't
+## stack five bombs in one spot to multiply a blast.
+##
+## The rule is symmetric and only applies between two exclusive props: an
+## exclusive prop may still overlap a non-exclusive one. Set this false on pieces
+## that are *meant* to be layered — ice planks crossing to form a junction, say.
+@export var exclusive_placement: bool = true
+
+## How far cursor resizing may take a prop. Uniform only — a non-uniform scale on
+## a RigidBody2D hands the physics engine a shape it can't represent, and
+## collisions stop matching what's drawn.
+const MIN_SCALE: float = 0.4
+const MAX_SCALE: float = 2.5
+
 ## Only one prop may be dragged at a time. Without this, overlapping props both
 ## receive the same click through physics picking and move together.
 static var _active_drag: PlaceableObject = null
+## Likewise for the rotate and resize gestures, and for knowing which prop the
+## cursor is over — the held-key gestures need a target without a click first.
+static var _active_rotate: PlaceableObject = null
+static var _active_scale: PlaceableObject = null
+static var _hovered: PlaceableObject = null
 
 var _dragging: bool = false
 var _drag_offset: Vector2 = Vector2.ZERO
+## Where the prop sat before this drag, so an illegal drop can be undone. Null
+## for a prop that came straight out of the palette and has no previous home.
+var _drag_return_to: Variant = null
+
+var _rotating: bool = false
+## Sticky gestures (started from the context menu) run until the player clicks.
+## Non-sticky ones (started by holding a key) end when the key comes up.
+var _rotate_sticky: bool = false
+var _rotate_offset: float = 0.0
+var _rotation_before: float = 0.0
+
+var _scaling: bool = false
+var _scale_sticky: bool = false
+var _scale_grab_distance: float = 1.0
+var _scale_at_grab: float = 1.0
+var _scale_before: float = 1.0
+
+## This prop's own collision shapes, used to test placement. Gathered once — a
+## prop's shapes don't change at runtime.
+var _own_shapes: Array[CollisionShape2D] = []
 
 
 func _ready() -> void:
@@ -48,7 +92,15 @@ func _ready() -> void:
 	add_to_group("placeable_objects")
 	input_pickable = true
 	input_event.connect(_on_input_event)
-	# _process is only needed while actually dragging; with a canvas full of
+	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_on_mouse_exited)
+	# Gestures must be abandoned when the mode changes, but NOT when the mode is
+	# merely applied during construction — a prop spawned from the palette has its
+	# drag started immediately after _ready, and cancelling it there would leave
+	# the player holding nothing.
+	SignalBus.mode_changed.connect(_on_mode_transition)
+	_collect_own_shapes()
+	# _process is only needed while a gesture is running; with a canvas full of
 	# props, leaving it on for every one of them is pure waste.
 	set_process(false)
 
@@ -56,6 +108,38 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if _active_drag == self:
 		_active_drag = null
+	if _active_rotate == self:
+		_active_rotate = null
+	if _active_scale == self:
+		_active_scale = null
+	if _hovered == self:
+		_hovered = null
+
+
+# ---------------------------------------------------------------- statics ----
+
+## The prop under the cursor, or null. The HUD uses this to know what a held
+## rotate/resize key should act on.
+static func get_hovered() -> PlaceableObject:
+	return _hovered if _hovered != null and is_instance_valid(_hovered) else null
+
+
+static func get_rotating() -> PlaceableObject:
+	return _active_rotate if _active_rotate != null and is_instance_valid(_active_rotate) else null
+
+
+static func get_scaling() -> PlaceableObject:
+	return _active_scale if _active_scale != null and is_instance_valid(_active_scale) else null
+
+
+static func get_dragging() -> PlaceableObject:
+	return _active_drag if _active_drag != null and is_instance_valid(_active_drag) else null
+
+
+## True while the player is manipulating any prop — the camera checks this so a
+## drag-to-pan can't fight a drag-to-move.
+static func is_manipulating() -> bool:
+	return get_dragging() != null or get_rotating() != null or get_scaling() != null
 
 
 # ------------------------------------------------------------ save state ----
@@ -73,7 +157,71 @@ func apply_save_state(_state: Dictionary) -> void:
 	pass
 
 
-# ------------------------------------------------------------- dragging ----
+# ----------------------------------------------------- placement validity ----
+
+## Collects the shapes belonging to THIS body, without descending into child
+## CollisionObject2Ds — a bomb's blast Trigger is an Area2D with its own shape,
+## and that shape describes its reach, not its footprint.
+func _collect_own_shapes() -> void:
+	_own_shapes.clear()
+	_gather_shapes(self)
+
+
+func _gather_shapes(node: Node) -> void:
+	for child in node.get_children():
+		if child is CollisionObject2D:
+			continue # a separate physics object; its shapes aren't ours
+		if child is CollisionShape2D and child.shape != null and not child.disabled:
+			_own_shapes.append(child)
+		_gather_shapes(child)
+
+
+## Whether the prop could legally be dropped where it currently sits.
+##
+## Uses a direct shape query rather than a child Area2D, because an Area2D does
+## NOT report frozen RigidBody2D bodies — and every prop is frozen while the
+## player is arranging, so an area-based probe silently sees nothing at exactly
+## the moment this question is asked. (Verified against 4.7: an area on an
+## unfrozen body reports its neighbours, the same area on a frozen one reports an
+## empty list, while a direct query finds them either way.)
+##
+## Both the cursor and the drop itself call this, so what the cursor promises and
+## what releasing the button does cannot disagree.
+func placement_is_valid() -> bool:
+	if not exclusive_placement or not is_inside_tree() or _own_shapes.is_empty():
+		return true
+	var space: PhysicsDirectSpaceState2D = get_world_2d().direct_space_state
+	if space == null:
+		return true
+
+	for source in _own_shapes:
+		var query: PhysicsShapeQueryParameters2D = PhysicsShapeQueryParameters2D.new()
+		query.shape = source.shape
+		# Includes this prop's scale, so a resized prop tests its real footprint.
+		query.transform = source.global_transform
+		query.collide_with_bodies = true
+		query.collide_with_areas = false
+		query.exclude = [get_rid()]
+
+		for hit in space.intersect_shape(query, 16):
+			var other: Object = hit.get("collider")
+			if other is PlaceableObject and other.exclusive_placement:
+				return false
+	return true
+
+
+# --------------------------------------------------------------- hovering ----
+
+func _on_mouse_entered() -> void:
+	_hovered = self
+
+
+func _on_mouse_exited() -> void:
+	if _hovered == self:
+		_hovered = null
+
+
+# ---------------------------------------------------------------- gestures ----
 
 func _on_input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> void:
 	if not GameManager.is_edit_mode() or not draggable:
@@ -84,44 +232,98 @@ func _on_input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) ->
 	var button: InputEventMouseButton = event
 	match button.button_index:
 		MOUSE_BUTTON_LEFT:
+			# A sticky gesture swallows the next click as "done" rather than
+			# letting it start a drag.
+			if _finish_sticky_gesture():
+				return
 			if _active_drag != null:
 				return # a prop under the same click already claimed it
 			_active_drag = self
 			_dragging = true
+			_drag_return_to = global_position
 			_drag_offset = global_position - get_global_mouse_position()
-			set_process(true)
+			_refresh_processing()
 		MOUSE_BUTTON_RIGHT:
-			remove_from_canvas()
+			# Deleting outright used to happen here. It's now one entry in a menu,
+			# so a misplaced right-click can't destroy work.
+			SignalBus.prop_context_requested.emit(self)
+
+
+static func _finish_sticky_gesture() -> bool:
+	var rotating: PlaceableObject = get_rotating()
+	if rotating != null:
+		rotating.end_rotate()
+		return true
+	var scaling: PlaceableObject = get_scaling()
+	if scaling != null:
+		scaling.end_scale()
+		return true
+	return false
 
 
 func _process(_delta: float) -> void:
-	if _dragging and GameManager.is_edit_mode():
+	if not GameManager.is_edit_mode():
+		return
+	if _dragging:
 		global_position = get_global_mouse_position() + _drag_offset
+	elif _rotating:
+		# Absolute aiming: the prop points at the cursor, offset by wherever it
+		# was pointing when the gesture began, so it never jumps on frame one.
+		rotation = (get_global_mouse_position() - global_position).angle() + _rotate_offset
+	elif _scaling:
+		# Size tracks how far the cursor is from the prop's centre relative to
+		# where it started, so dragging outward grows and inward shrinks.
+		var distance: float = maxf(1.0, (get_global_mouse_position() - global_position).length())
+		set_uniform_scale(_scale_at_grab * distance / _scale_grab_distance)
 
 
 func _input(event: InputEvent) -> void:
+	# Runs on every prop, so bail out fast for the ones not being manipulated.
+	if not _dragging and not _is_sticky():
+		return
+	if not event is InputEventMouseButton:
+		return
+	var button: InputEventMouseButton = event
+
 	# Release the drag even when the button comes up outside the prop's shape.
 	#
 	# This is _input rather than _unhandled_input because a drag that started
 	# from the palette often ends with the cursor back over the palette Button,
 	# and a Control consumes the mouse-up before unhandled input ever sees it —
-	# leaving the prop welded to the cursor forever. The `_dragging` guard keeps
-	# this free for every prop that isn't currently being moved.
-	if not _dragging or not event is InputEventMouseButton:
+	# leaving the prop welded to the cursor forever.
+	if _dragging and button.button_index == MOUSE_BUTTON_LEFT and not button.pressed:
+		_drop()
 		return
-	var button: InputEventMouseButton = event
-	if button.button_index == MOUSE_BUTTON_LEFT and not button.pressed:
-		_end_drag()
-		SignalBus.object_placed.emit(self)
+
+	# Confirm a menu-started gesture with a click anywhere.
+	if _is_sticky() and button.pressed and button.button_index == MOUSE_BUTTON_LEFT:
+		_finish_sticky_gesture()
+		get_viewport().set_input_as_handled()
+
+
+func _is_sticky() -> bool:
+	return (_rotating and _rotate_sticky) or (_scaling and _scale_sticky)
 
 
 func _on_mode_applied(_mode: GameManager.Mode) -> void:
-	_end_drag()
+	# Called during construction too, so this must only touch physics state —
+	# anything that cancels player input belongs in _on_mode_transition.
 	if anchored:
 		# Runs after SimulatedBody has already decided freeze for this mode, so
 		# this is the last word: anchored props are frozen in every mode.
 		freeze = true
 
+
+## A genuine mode change, as opposed to the mode being applied at startup. Leaving
+## a gesture running across PLAY would let the player keep dragging a prop while
+## the simulation ran.
+func _on_mode_transition(_new_mode: GameManager.Mode) -> void:
+	_end_drag()
+	end_rotate()
+	end_scale()
+
+
+# -------------------------------------------------------------- dragging ----
 
 ## Called by PaletteItem the moment a prop is spawned out of the toolbar, so the
 ## new prop is already following the cursor and the player's existing mouse-down
@@ -133,21 +335,184 @@ func begin_drag_from_palette() -> void:
 	_active_drag = self
 	_dragging = true
 	_drag_offset = Vector2.ZERO
-	set_process(true)
+	# No previous home: an illegal drop cancels the placement outright rather
+	# than snapping back to somewhere the prop has never been.
+	_drag_return_to = null
+	_refresh_processing()
+
+
+## Resolves the end of a drag: keep the new spot, undo it, or cancel a brand-new
+## prop entirely.
+func _drop() -> void:
+	# Recomputed here rather than trusting the cached value, so the decision is
+	# made against the position the prop is actually being left in.
+	if placement_is_valid():
+		_end_drag()
+		SignalBus.object_placed.emit(self)
+		return
+
+	if _drag_return_to == null:
+		# Straight from the palette onto an illegal spot — nothing to undo, so the
+		# placement simply doesn't happen.
+		remove_from_canvas()
+		return
+
+	global_position = _drag_return_to
+	_end_drag()
+	SignalBus.object_placed.emit(self)
 
 
 func _end_drag() -> void:
 	if _active_drag == self:
 		_active_drag = null
 	_dragging = false
-	set_process(false)
+	_drag_return_to = null
+	_refresh_processing()
 
+
+# -------------------------------------------------------------- rotating ----
+
+## `sticky` gestures (from the context menu) keep going until the player clicks;
+## non-sticky ones (from holding the key) end when the key is released.
+func begin_rotate(sticky: bool = false) -> void:
+	if not _can_begin_gesture() or _active_rotate == self:
+		return
+	_end_drag()
+	end_scale()
+
+	_active_rotate = self
+	_rotating = true
+	_rotate_sticky = sticky
+	_rotation_before = rotation
+	_rotate_offset = rotation - (get_global_mouse_position() - global_position).angle()
+	_refresh_processing()
+
+
+func end_rotate() -> void:
+	if not _rotating:
+		return
+	if _active_rotate == self:
+		_active_rotate = null
+	_rotating = false
+	_rotate_sticky = false
+	_refresh_processing()
+	SignalBus.object_placed.emit(self)
+
+
+## Ends a rotation started by holding the key, leaving a menu-started (sticky)
+## one alone — that one is the player's to finish with a click.
+func end_hold_rotate() -> void:
+	if _rotating and not _rotate_sticky:
+		end_rotate()
+
+
+## Abandons the rotation and puts the prop back at the angle it had.
+func cancel_rotate() -> void:
+	if not _rotating:
+		return
+	rotation = _rotation_before
+	if _active_rotate == self:
+		_active_rotate = null
+	_rotating = false
+	_rotate_sticky = false
+	_refresh_processing()
+
+
+func is_rotating() -> bool:
+	return _rotating
+
+
+# --------------------------------------------------------------- scaling ----
+
+func begin_scale(sticky: bool = false) -> void:
+	if not _can_begin_gesture() or _active_scale == self:
+		return
+	_end_drag()
+	end_rotate()
+
+	_active_scale = self
+	_scaling = true
+	_scale_sticky = sticky
+	_scale_before = scale.x
+	_scale_at_grab = scale.x
+	# Clamped away from zero so a grab exactly on the centre can't divide by it.
+	_scale_grab_distance = maxf(1.0, (get_global_mouse_position() - global_position).length())
+	_refresh_processing()
+
+
+func end_scale() -> void:
+	if not _scaling:
+		return
+	if _active_scale == self:
+		_active_scale = null
+	_scaling = false
+	_scale_sticky = false
+	_refresh_processing()
+	SignalBus.object_placed.emit(self)
+
+
+func end_hold_scale() -> void:
+	if _scaling and not _scale_sticky:
+		end_scale()
+
+
+func cancel_scale() -> void:
+	if not _scaling:
+		return
+	set_uniform_scale(_scale_before)
+	if _active_scale == self:
+		_active_scale = null
+	_scaling = false
+	_scale_sticky = false
+	_refresh_processing()
+
+
+func is_scaling() -> bool:
+	return _scaling
+
+
+## Clamped uniform resize. Returns true if the size actually changed.
+func set_uniform_scale(value: float) -> bool:
+	var wanted: float = clampf(value, MIN_SCALE, MAX_SCALE)
+	if is_equal_approx(wanted, scale.x):
+		return false
+	scale = Vector2(wanted, wanted)
+	return true
+
+
+func can_grow() -> bool:
+	return scale.x < MAX_SCALE - 0.001
+
+
+func can_shrink() -> bool:
+	return scale.x > MIN_SCALE + 0.001
+
+
+# --------------------------------------------------------------- helpers ----
+
+func _can_begin_gesture() -> bool:
+	if not draggable or not GameManager.is_edit_mode():
+		return false
+	# Another prop is mid-gesture; don't let a second one join in.
+	return not (get_rotating() != null and get_rotating() != self) \
+		and not (get_scaling() != null and get_scaling() != self)
+
+
+func _refresh_processing() -> void:
+	# Only _process is managed here. _physics_process is left alone so subclasses
+	# that need it for their own behaviour — Bomb's fuse — stay in charge of it.
+	set_process(_dragging or _rotating or _scaling)
+
+
+func _cancel_all_gestures() -> void:
+	_end_drag()
+	cancel_rotate()
+	cancel_scale()
+
+
+# -------------------------------------------------------------- removal ----
 
 func remove_from_canvas() -> void:
 	SignalBus.object_removed.emit(self)
-	_end_drag()
-	# Detach immediately so a LevelLayout.capture() on this same frame can't see
-	# a node that is already on its way out.
-	if get_parent() != null:
-		get_parent().remove_child(self)
-	queue_free()
+	_cancel_all_gestures()
+	detach_and_free()

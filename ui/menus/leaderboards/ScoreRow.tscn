@@ -1,19 +1,22 @@
 [gd_scene load_steps=2 format=3 uid="uid://et4f7cuarmnt"]
 
-[ext_resource type="Script" uid="uid://dc4d32plgqvu5" path="res://ui/menus/leaderboards/ScoreRow.gd" id="1_i8i3m"]
+[ext_resource type="Script" path="res://ui/menus/leaderboards/ScoreRow.gd" id="1_i8i3m"]
 
 [node name="ScoreRow" type="HBoxContainer"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+theme_override_constants/separation = 12
 script = ExtResource("1_i8i3m")
+
+[node name="RankLabel" type="Label" parent="."]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+horizontal_alignment = 2
 
 [node name="NameLabel" type="Label" parent="."]
 layout_mode = 2
 size_flags_horizontal = 3
+clip_text = true
 
-[node name="ScoreLable" type="Label" parent="."]
+[node name="ScoreLabel" type="Label" parent="."]
+custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 horizontal_alignment = 2

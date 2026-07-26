@@ -1,87 +1,60 @@
 extends Control
-
-const SETTINGS_PATH: String = "user://settings.cfg"
-var config: ConfigFile = ConfigFile.new()
+# A view over the Settings autoload. It holds no state and writes no files —
+# Settings owns user://settings.cfg and applies everything, including at boot, so
+# a language chosen last session is already in effect before this screen exists.
+#
+# The Controls tab is still the placeholder buttons from the original scene.
+# Wiring it up means replacing them with KeyMapButton instances (one per action:
+# camera_up/down/left/right, toggle_play, toggle_pause, rotate_prop, scale_prop);
+# KeyMapButton.gd is ready for that and takes a `mapped_action` before being
+# added to the tree.
 
 @onready var master_slider: HSlider = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Audio/MasterSlider
 @onready var fps_option: OptionButton = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Display/FPSLimit
 @onready var language_option: OptionButton = $PanelContainer/MarginContainer/VBoxContainer/Tabs/Accessibility/Language
+@onready var title_label: Label = $PanelContainer/MarginContainer/VBoxContainer/Title
+@onready var back_button: Button = $PanelContainer/MarginContainer/VBoxContainer/Back
 
-func _ready():
-	# 1. Populate Dropdowns
-	fps_option.add_item("60 FPS", 60)
-	fps_option.add_item("120 FPS", 120)
-	fps_option.add_item("Uncapped", 0)
 
-	language_option.add_item("English", 0)
-	language_option.add_item("Español", 1)
+func _ready() -> void:
+	title_label.text = "SETTINGS_TITLE"
+	back_button.text = "LB_CLOSE"
 
-	# 2. Connect Signals
-	master_slider.value_changed.connect(_on_master_audio_changed)
-	fps_option.item_selected.connect(_on_fps_selected)
-	language_option.item_selected.connect(_on_language_selected)
-	$PanelContainer/MarginContainer/VBoxContainer/CloseButton.pressed.connect(_on_close_button_pressed)
+	_populate_options()
 
-	# 3. Load Saved Settings (or create defaults)
-	load_settings()
+	master_slider.min_value = 0.0
+	master_slider.max_value = 1.0
+	master_slider.step = 0.01
 
-func load_settings():
-	var err: int = config.load(SETTINGS_PATH)
-	if err == OK:
-		# File exists, load values (with fallback defaults if a key is missing)
-		var master_vol = config.get_value("audio", "master_volume", 1.0)
-		var fps_idx = config.get_value("display", "fps_index", 0)
-		var lang_idx = config.get_value("accessibility", "language_index", 0)
+	master_slider.value_changed.connect(Settings.set_master_volume)
+	fps_option.item_selected.connect(Settings.set_fps_index)
+	language_option.item_selected.connect(Settings.set_locale_index)
+	back_button.pressed.connect(hide)
+	# Each language names itself in the dropdown, so the list has to be rebuilt
+	# whenever the locale changes.
+	SignalBus.locale_changed.connect(_on_locale_changed)
 
-		# Update UI Elements without triggering their signals recursively
-		master_slider.set_value_no_signal(master_vol)
-		fps_option.selected = fps_idx
-		language_option.selected = lang_idx
+	_show_current_values()
 
-		# Apply the values to the game engine directly
-		apply_audio(master_vol)
-		apply_fps(fps_idx)
-		apply_language(lang_idx)
-	else:
-		# First time opening the game: save current UI defaults to file
-		save_settings()
 
-func save_settings():
-	config.set_value("audio", "master_volume", master_slider.value)
-	config.set_value("display", "fps_index", fps_option.selected)
-	config.set_value("accessibility", "language_index", language_option.selected)
-	config.save(SETTINGS_PATH)
+func _populate_options() -> void:
+	fps_option.clear()
+	for i in Settings.FPS_OPTIONS.size():
+		var fps: int = Settings.FPS_OPTIONS[i]
+		fps_option.add_item(tr("SETTINGS_FPS_UNCAPPED") if fps == 0 else "%d FPS" % fps, i)
 
-# --- Signal Callbacks (Triggered by Player Input) ---
+	language_option.clear()
+	for i in Settings.LOCALE_LABEL_KEYS.size():
+		language_option.add_item(tr(Settings.LOCALE_LABEL_KEYS[i]), i)
 
-func _on_master_audio_changed(value: float):
-	apply_audio(value)
-	save_settings()
 
-func _on_fps_selected(index: int):
-	apply_fps(index)
-	save_settings()
+func _show_current_values() -> void:
+	# set_value_no_signal, or this would echo straight back into Settings.
+	master_slider.set_value_no_signal(Settings.master_volume)
+	fps_option.selected = Settings.fps_index
+	language_option.selected = Settings.locale_index
 
-func _on_language_selected(index: int):
-	apply_language(index)
-	save_settings()
 
-func _on_close_button_pressed():
-	hide()
-
-# --- Engine Application Logic ---
-
-func apply_audio(value: float):
-	var bus_idx: int = AudioServer.get_bus_index("Master")
-	# Prevent taking log of 0 if slider goes all the way down
-	var db: float = linear_to_db(value) if value > 0.001 else -80.0
-	AudioServer.set_bus_volume_db(bus_idx, db)
-
-func apply_fps(index: int):
-	var target_fps: int = fps_option.get_item_id(index)
-	Engine.max_fps = target_fps
-
-func apply_language(index: int):
-	match index:
-		0: TranslationServer.set_locale("en")
-		1: TranslationServer.set_locale("es")
+func _on_locale_changed(_locale: String) -> void:
+	_populate_options()
+	_show_current_values()
