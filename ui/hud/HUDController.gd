@@ -46,6 +46,11 @@ var _menu_target: PlaceableObject = null
 ## While staged, _refresh_controls must not put the palette back — the tutorial owns
 ## what is visible until it hands over.
 var _tutorial_staged: bool = false
+## Set while Joe's follow-up is playing: the result panel is built but withheld until
+## he's finished, and the pause dimmer is shown as a demonstration rather than because
+## the game is actually paused.
+var _result_held: bool = false
+var _pause_demo: bool = false
 
 
 func _ready() -> void:
@@ -123,6 +128,27 @@ func set_controls_visible(shown: bool) -> void:
 	back_button.visible = shown
 	play_button.visible = shown
 	pause_button.visible = shown
+
+
+## Keeps the finished result panel off screen while Joe talks over the top of it.
+## There is no arrangement in which he and a full-height panel both fit.
+func hold_result_panel() -> void:
+	_result_held = true
+	result_panel.hide()
+
+
+func release_result_panel() -> void:
+	if not _result_held:
+		return
+	_result_held = false
+	result_panel.show()
+
+
+## Shows the pause dimmer WITHOUT pausing anything, purely to point at the buttons on
+## it. Kept separate from the real pause state so _refresh_controls can't fight it.
+func show_pause_demo(shown: bool) -> void:
+	_pause_demo = shown
+	pause_overlay.visible = shown or GameManager.current_mode == GameManager.Mode.PAUSED
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -276,6 +302,9 @@ func _inspect_prop(scene: PackedScene) -> Dictionary:
 # ----------------------------------------------------------------- state ----
 
 func _on_level_started(_level_id: int) -> void:
+	_result_held = false
+	_pause_demo = false
+	pause_overlay.hide()
 	_build_palette()
 	_refresh_controls()
 	_refresh_best_label()
@@ -296,8 +325,8 @@ func _refresh_controls() -> void:
 	# tutorial overrides this while it's explaining what the palette is for.
 	palette_items.get_parent().visible = mode == GameManager.Mode.EDIT and not _tutorial_staged
 
-	# Paused is the dimmer, not a panel.
-	pause_overlay.visible = mode == GameManager.Mode.PAUSED
+	# Paused is the dimmer, not a panel. The tutorial can also raise it as a demo.
+	pause_overlay.visible = mode == GameManager.Mode.PAUSED or _pause_demo
 	if mode == GameManager.Mode.PAUSED:
 		result_panel.hide()
 	elif mode == GameManager.Mode.EDIT or mode == GameManager.Mode.PLAY:
@@ -329,9 +358,18 @@ func _on_goal_reached(level_id: int, attempt_time: float, bank_delta: float) -> 
 		lines.append(tr("RESULT_NO_IMPROVEMENT"))
 	lines.append(tr("RESULT_BANK_LEFT") % format_seconds(SaveManager.get_time_bank()))
 
+	# On the very first clear the only way onward is the next level. Offering a route
+	# to the level list before Joe has explained what it's for teaches nothing, and he
+	# is about to explain it.
+	var first_clear: bool = SaveManager.needs_first_clear_outro(level_id, bank_delta) \
+		and not get_tree().get_nodes_in_group("tutorial").is_empty()
+	if first_clear:
+		# Withheld here rather than by the tutorial, because this handler runs first —
+		# letting it show would flash the panel for a frame before Joe hid it again.
+		hold_result_panel()
 	_show_panel(
 		tr("RESULT_COMPLETED"), "\n".join(lines),
-		true, GameManager.level_exists(level_id + 1)
+		not first_clear, GameManager.level_exists(level_id + 1), not first_clear
 	)
 	# The whole point of landing the ball: see where it puts you against everyone
 	# else on this level.
@@ -348,15 +386,18 @@ func _on_time_ran_out(_level_id: int) -> void:
 	_show_panel(tr("RESULT_TIME_UP"), tr("RESULT_TIME_UP_DETAIL"), true, false)
 
 
-func _show_panel(title: String, detail: String, show_edit: bool, show_next: bool) -> void:
+func _show_panel(title: String, detail: String, show_edit: bool, show_next: bool,
+		show_select: bool = true) -> void:
 	result_title.text = title
 	result_detail.text = detail
 	result_detail.visible = not detail.is_empty()
 	edit_button.visible = show_edit
 	next_button.visible = show_next
+	select_button.visible = show_select
 	# Only a completed level has a board worth showing; _on_goal_reached reveals it.
 	leaderboard.hide()
-	result_panel.show()
+	if not _result_held:
+		result_panel.show()
 
 
 func _on_next_pressed() -> void:

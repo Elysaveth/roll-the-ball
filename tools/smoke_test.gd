@@ -85,6 +85,7 @@ func _run() -> void:
 	await _phase("intro sequence", _test_intro_sequence)
 	await _phase("progress follows the name", _test_progress_per_player)
 	await _phase("tutorial", _test_tutorial)
+	await _phase("first clear outro", _test_first_clear_outro)
 
 
 ## Runs one section and guards against silent coverage loss.
@@ -1461,6 +1462,72 @@ func _test_tutorial() -> void:
 	SaveManager.switch_player(TEST_PLAYER)
 
 
+## Joe's follow-up after the first clear, and the restricted result panel that goes with
+## it. The restriction is the point: there is no route to the level list until he has
+## explained what the level list is for.
+func _test_first_clear_outro() -> void:
+	print("\n[first clear outro]")
+	var tutorial: Tutorial = _main.get_node_or_null("UI/Tutorial")
+	var hud: HUDController = _main.get_node_or_null("UI/HUD")
+	if tutorial == null or hud == null:
+		check(false, "the tutorial and HUD are available")
+		return
+
+	SaveManager.switch_player("__outro_probe__")
+	SaveManager.erase_all_data()
+	SaveManager.switch_player("__outro_probe__")
+	SaveManager.mark_tutorial_seen() # only the outro is under test here
+
+	# A first clear is a negative bank delta; anything else must not trigger it.
+	check(SaveManager.needs_first_clear_outro(1, -4.0), "a first clear of level 1 asks for it")
+	check(not SaveManager.needs_first_clear_outro(1, 0.0), "finishing without improving does not")
+	check(not SaveManager.needs_first_clear_outro(1, 2.0), "nor does beating an old time")
+	check(not SaveManager.needs_first_clear_outro(2, -4.0), "nor a first clear of a later level")
+
+	# Drive the real signal so the HUD and the tutorial both react as they would in play.
+	LevelLayout.clear(GameManager.get_placed_objects_container())
+	SignalBus.goal_reached.emit(1, 4.0, -4.0)
+	await get_tree().process_frame
+
+	check(tutorial.is_running(), "Joe comes back for it")
+	check(not hud.result_panel.visible, "the result panel waits until he's done")
+	# Built, but withheld: the buttons are already set to the restricted arrangement.
+	check(hud.next_button.visible, "'next level' is the only way onward")
+	check(not hud.select_button.visible, "the level list is not offered yet")
+	check(not hud.edit_button.visible, "and neither is going back to editing")
+
+	# Step to the last line, which demonstrates where the level list lives.
+	check(not hud.pause_overlay.visible, "the pause dimmer starts hidden")
+	for i in range(Tutorial.OUTRO_STEPS.size() - 1):
+		tutorial._advance()
+	check(hud.pause_overlay.visible, "the last line raises the pause dimmer as a demo")
+	check(
+		GameManager.current_mode != GameManager.Mode.PAUSED,
+		"which is a demonstration, not an actual pause"
+	)
+
+	tutorial._finish()
+	await get_tree().process_frame
+	check(not tutorial.is_running(), "he leaves")
+	check(not hud.pause_overlay.visible, "the dimmer goes with him")
+	check(hud.result_panel.visible, "and the result panel finally appears")
+	check(SaveManager.has_seen_outro(), "it is remembered")
+
+	# Seen once, never again — including on a later first clear.
+	check(not SaveManager.needs_first_clear_outro(1, -4.0), "it does not run a second time")
+	SignalBus.goal_reached.emit(1, 3.0, -3.0)
+	await get_tree().process_frame
+	check(not tutorial.is_running(), "a later clear does not bring him back")
+	check(hud.select_button.visible, "and the level list is offered from then on")
+
+	SaveManager.erase_all_data()
+	SaveManager.switch_player(TEST_PLAYER)
+	SaveManager.mark_tutorial_seen()
+	SaveManager.mark_outro_seen()
+	hud.release_result_panel()
+	hud.show_pause_demo(false)
+
+
 # ---------------------------------------------------------------- helpers ----
 
 func _finish_attempt_in(seconds: float) -> void:
@@ -1493,10 +1560,12 @@ func _reset_profile() -> void:
 		SaveManager.delete_layout(level_id)
 	SaveManager.erase_all_data()
 	SaveManager.switch_player(TEST_PLAYER)
-	# Without this the tutorial claims level 1 — a player with no progress is exactly
-	# who it's for — then despawns the ball and covers the screen for every test after
-	# it. _test_tutorial drives it explicitly from its own fresh player instead.
+	# Without these the tutorial claims level 1 — a player with no progress is exactly
+	# who it's for — and Joe's follow-up fires on the first bank test's clear, either of
+	# which despawns the ball and covers the screen for every test after it. Both are
+	# driven explicitly from their own fresh players instead.
 	SaveManager.mark_tutorial_seen()
+	SaveManager.mark_outro_seen()
 
 
 func _backup_user_data() -> void:

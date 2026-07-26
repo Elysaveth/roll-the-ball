@@ -1,20 +1,27 @@
 extends CanvasLayer
 class_name Tutorial
-# Joe's introduction, played the first time a player with nothing behind them opens
-# level 1.
+# Joe's two appearances.
 #
-# It builds the level up as he talks rather than explaining a screen that's already
-# full: the ball and its platform appear when he mentions the ball, the basket when he
-# mentions the basket, the clock when he mentions time, the palette when he mentions
-# dragging props in. When he's done he fades out, the balloon pops, and level 1 is
-# simply there, complete and playable.
+# INTRO — the first time a player with nothing behind them opens level 1. It builds the
+# level up as he talks rather than explaining a screen that's already full: the ball and
+# its platform appear when he mentions the ball, the basket when he mentions the basket,
+# the clock when he mentions time, the palette when he mentions dragging props in.
 #
-# Self-contained: it decides for itself whether to run by listening for level_started,
-# so nothing in GameManager knows the tutorial exists.
+# OUTRO — the first time they clear level 1. He covers what the intro deliberately left
+# out: that the clock is a single budget for the WHOLE game, that later levels hand out
+# props, that props are kept once unlocked, and that old levels can be replayed for a
+# better time. That last point is why the result panel offers nothing but "next level"
+# until he's said it — there is no sense showing a route to the level list before
+# explaining what the level list is for.
+#
+# Self-contained: it decides for itself whether to run by listening to SignalBus, so
+# nothing in GameManager knows either sequence exists.
 #
 # The reveal paths below are node names inside levels/level_01. That coupling is
-# deliberate and narrow — the tutorial is about level 1 specifically — and a renamed
-# node produces a warning rather than a silent no-op.
+# deliberate and narrow — the intro is about level 1 specifically — and a renamed node
+# produces a warning rather than a silent no-op.
+
+enum Kind { INTRO, OUTRO }
 
 const TUTORIAL_LEVEL: int = 1
 
@@ -28,7 +35,7 @@ const STAGED_PARTS: PackedStringArray = [
 	"Goal",
 ]
 
-## What Joe says, and what appears as he says it.
+## What Joe says on the way in, and what appears as he says it.
 const STEPS: Array = [
 	{"text": "TUTORIAL_WELCOME"},
 	{"text": "TUTORIAL_BALL", "reveal": ["Geometry/LeftLedge"], "spawn_ball": true},
@@ -47,6 +54,16 @@ const STEPS: Array = [
 	{"text": "TUTORIAL_GOODBYE"},
 ]
 
+## What he comes back to say after the first clear.
+const OUTRO_STEPS: Array = [
+	{"text": "OUTRO_TIME"},
+	{"text": "OUTRO_NEW_PROPS"},
+	{"text": "OUTRO_KEEP_PROPS"},
+	# Showing the pause dimmer while he mentions replaying is the demonstration: that
+	# is where the way back to the level list lives.
+	{"text": "OUTRO_REPLAY", "show_pause_demo": true},
+]
+
 const FADE_IN: float = 0.5
 const JOE_FADE_OUT: float = 1.0
 const BALLOON_POP: float = 0.22
@@ -62,6 +79,8 @@ signal tutorial_finished
 @onready var continue_label: Label = $Root/Balloon/Margin/VBox/Continue
 
 var _step: int = -1
+var _steps: Array = []
+var _kind: Kind = Kind.INTRO
 var _running: bool = false
 ## True while a transition is playing, so a fast clicker can't skip a reveal.
 var _busy: bool = false
@@ -77,9 +96,13 @@ var _balloon_rest: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	hide()
+	# The HUD checks for this group before withholding the result panel — no tutorial
+	# in the scene means nobody would ever release it again.
+	add_to_group("tutorial")
 	_joe_rest = Vector2(joe.offset_top, joe.offset_bottom)
 	_balloon_rest = Vector2(balloon.offset_top, balloon.offset_bottom)
 	SignalBus.level_started.connect(_on_level_started)
+	SignalBus.goal_reached.connect(_on_goal_reached)
 
 
 func _on_level_started(level_id: int) -> void:
@@ -90,17 +113,23 @@ func _on_level_started(level_id: int) -> void:
 	# times would mean twenty introductions.
 	if SaveManager.has_seen_tutorial() or SaveManager.has_progress():
 		return
-	_begin()
+	_begin_intro()
 
 
-func _begin() -> void:
+func _on_goal_reached(level_id: int, _attempt_time: float, bank_delta: float) -> void:
+	if not SaveManager.needs_first_clear_outro(level_id, bank_delta):
+		return
+	_begin_outro()
+
+
+# ------------------------------------------------------------------- intro ----
+
+func _begin_intro() -> void:
 	var level: Level = GameManager.get_current_level()
-	var hud: HUDController = _find_hud()
 	if level == null:
 		return
+	var hud: HUDController = _find_hud()
 
-	_running = true
-	show()
 	# Bare background: no level, no ball, no HUD furniture.
 	for path in STAGED_PARTS:
 		level.set_part_visible(path, false)
@@ -108,6 +137,31 @@ func _begin() -> void:
 	if hud != null:
 		hud.stage_for_tutorial()
 
+	_start(STEPS, Kind.INTRO)
+
+
+# ------------------------------------------------------------------- outro ----
+
+func _begin_outro() -> void:
+	# The result panel is held back until Joe has finished. There is no arrangement in
+	# which he and a 660px panel both fit without one covering the other, and the panel
+	# is the thing the player acts on — so it arrives last, once he's out of the way.
+	var hud: HUDController = _find_hud()
+	if hud != null:
+		hud.hold_result_panel()
+	_start(OUTRO_STEPS, Kind.OUTRO)
+
+
+# --------------------------------------------------------------- sequencing ----
+
+func _start(steps: Array, kind: Kind) -> void:
+	_running = true
+	_busy = false
+	_kind = kind
+	_steps = steps
+	_step = -1
+
+	show()
 	joe.modulate.a = 0.0
 	balloon.modulate.a = 0.0
 	balloon.scale = Vector2.ONE
@@ -141,14 +195,14 @@ func _input(event: InputEvent) -> void:
 
 func _advance() -> void:
 	_step += 1
-	if _step >= STEPS.size():
+	if _step >= _steps.size():
 		_bow_out()
 		return
 
-	var step: Dictionary = STEPS[_step]
+	var step: Dictionary = _steps[_step]
 	text_label.text = tr(str(step.get("text", "")))
 	# The last line has nothing to click through to.
-	continue_label.visible = _step < STEPS.size() - 1
+	continue_label.visible = _step < _steps.size() - 1
 
 	var level: Level = GameManager.get_current_level()
 	if level != null:
@@ -163,6 +217,8 @@ func _advance() -> void:
 			hud.set_clock_visible(true)
 		if bool(step.get("show_palette", false)):
 			hud.set_palette_visible(true)
+		if bool(step.get("show_pause_demo", false)):
+			hud.show_pause_demo(true)
 
 	# Steps that don't mention a lift keep whatever the last one set.
 	var wanted_lift: float = float(step.get("lift", _lift))
@@ -214,8 +270,8 @@ func _bow_out() -> void:
 	_finish()
 
 
-## Hands the finished level over. Reached both by playing out and by skipping, so
-## everything staged has to be restored here rather than at the end of _bow_out.
+## Hands control back. Reached both by playing out and by skipping, so everything
+## staged has to be restored here rather than at the end of _bow_out.
 func _finish() -> void:
 	if not _running:
 		return
@@ -223,18 +279,23 @@ func _finish() -> void:
 	_busy = false
 	hide()
 
-	var level: Level = GameManager.get_current_level()
-	if level != null:
-		for path in STAGED_PARTS:
-			level.set_part_visible(path, true)
-		if level.get_ball() == null:
-			level.reset_level()
-
 	var hud: HUDController = _find_hud()
-	if hud != null:
-		hud.unstage_from_tutorial()
+	if _kind == Kind.INTRO:
+		var level: Level = GameManager.get_current_level()
+		if level != null:
+			for path in STAGED_PARTS:
+				level.set_part_visible(path, true)
+			if level.get_ball() == null:
+				level.reset_level()
+		if hud != null:
+			hud.unstage_from_tutorial()
+		SaveManager.mark_tutorial_seen()
+	else:
+		if hud != null:
+			hud.show_pause_demo(false)
+			hud.release_result_panel()
+		SaveManager.mark_outro_seen()
 
-	SaveManager.mark_tutorial_seen()
 	tutorial_finished.emit()
 
 
@@ -246,9 +307,18 @@ func _find_hud() -> HUDController:
 	return null
 
 
+func is_running() -> bool:
+	return _running
+
+
 ## Exposed for the test suite and for a "replay tutorial" button later.
 func force_start() -> void:
 	if _running:
 		return
-	_step = -1
-	_begin()
+	_begin_intro()
+
+
+func force_start_outro() -> void:
+	if _running:
+		return
+	_begin_outro()

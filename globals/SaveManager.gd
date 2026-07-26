@@ -41,6 +41,9 @@ const LEGACY_PROFILE_PATH: String = "user://profile.json"
 ## The whole game is played out of this one budget, in seconds.
 const STARTING_BANK: float = 60.0
 
+## The level the tutorial and its follow-up belong to.
+const FIRST_LEVEL: int = 1
+
 const PROFILE_VERSION: int = 2
 
 var _profile: Dictionary = {}
@@ -215,6 +218,7 @@ func _default_profile() -> Dictionary:
 		"materials": {},         # material id -> count, for blueprint crafting later
 		"broken_counts": {},     # what the player has destroyed, feeds materials
 		"tutorial_seen": false,  # so it doesn't replay after every failed attempt
+		"outro_seen": false,     # Joe's follow-up, shown once on the first clear
 	}
 
 
@@ -251,6 +255,30 @@ func mark_tutorial_seen() -> void:
 		return
 	_profile["tutorial_seen"] = true
 	save_profile()
+
+
+func has_seen_outro() -> bool:
+	return bool(_profile.get("outro_seen", false))
+
+
+func mark_outro_seen() -> void:
+	if has_seen_outro():
+		return
+	_profile["outro_seen"] = true
+	save_profile()
+
+
+## Whether this completion should bring Joe back for his follow-up: the first time the
+## opening level is cleared, once ever.
+##
+## A negative bank_delta is what "first clear" means — the bank is only ever charged on
+## a level the player had not finished before (see charge_for_completion).
+##
+## Lives here rather than in the tutorial so the HUD can ask the same question without
+## depending on a class name, which is exactly the sort of thing Godot's script class
+## cache drops after a fresh checkout.
+func needs_first_clear_outro(level_id: int, bank_delta: float) -> bool:
+	return level_id == FIRST_LEVEL and bank_delta < 0.0 and not has_seen_outro()
 
 
 # ------------------------------------------------------------- time bank ----
